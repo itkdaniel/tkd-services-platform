@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/tkd-services/"
+title = "TKD Services"
+version = "1.0.0"
+id = "artifacts/tkd-services"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/tkd-services/" ]
+localPort = 25931
+
+[services.development]
+run = "pnpm --filter @workspace/tkd-services run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tkd-services", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/tkd-services/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25931"
+BASE_PATH = "/tkd-services/"

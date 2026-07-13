@@ -2,3 +2,6 @@
 - [Canvas 2D context can't use CSS vars](canvas-css-vars.md) — `ctx.font`/`ctx.fillStyle` must be literal values, never `var(--token)`, or text/backgrounds render wrong.
 - [Drizzle timestamp vs generated Zod schemas](drizzle-date-serialization.md) — Drizzle returns `Date` objects but codegen'd response schemas expect ISO strings; serialize before validating.
 - [Orval-generated ApiError shape](orval-api-error-shape.md) — error message lives at `err.message` (or `err.data`), not `err.error`; don't guess the shape from convention.
+- [Wouter v3 nested Switch routing gotcha](wouter-v3-nested-routes.md) — outer `<Route nest>` for a shared layout must use `path="/"`, not a wildcard, or every path silently renders the root route.
+- [drizzle-kit push fails with untracked tables](drizzle-push-interactive-prompt.md) — untracked tables (e.g. manual `sessions`) make `push`/`push --force` hang on an unanswerable TTY prompt; create new tables via raw SQL instead.
+- [Shared auth across artifacts](shared-auth-across-artifacts.md) — this workspace's products intentionally share one `users` table; "first user = admin" is workspace-wide, not per-product.

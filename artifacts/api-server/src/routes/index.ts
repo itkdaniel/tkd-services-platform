@@ -7,6 +7,8 @@ import fieldsRouter from "./fields";
 import entriesRouter from "./entries";
 import relationsRouter from "./relations";
 import graphRouter from "./graph";
+import blogRouter from "./blog";
+import contactRouter from "./contact";
 
 const router: IRouter = Router();
 
@@ -18,5 +20,7 @@ router.use(fieldsRouter);
 router.use(entriesRouter);
 router.use(relationsRouter);
 router.use(graphRouter);
+router.use(blogRouter);
+router.use(contactRouter);
 
 export default router;

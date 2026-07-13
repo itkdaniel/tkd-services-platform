@@ -3,3 +3,5 @@ export * from "./featureTables";
 export * from "./featureFields";
 export * from "./featureEntries";
 export * from "./entityRelations";
+export * from "./blogPosts";
+export * from "./contactMessages";
