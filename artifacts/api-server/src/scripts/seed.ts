@@ -7,9 +7,50 @@
  */
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-import { db, entityRelationsTable, featureEntriesTable, featureFieldsTable, featureTablesTable, usersTable } from "@workspace/db";
+import { db, entityRelationsTable, featureEntriesTable, featureFieldsTable, featureTablesTable, usersTable, projectsTable } from "@workspace/db";
 
 async function main() {
+  const [demoUser] = await db
+    .select({ id: usersTable.id, username: usersTable.username })
+    .from(usersTable)
+    .where(eq(usersTable.username, "demo"));
+
+  let seedUserId: number;
+  let seedUsername: string;
+  if (!demoUser) {
+    const passwordHash = await bcrypt.hash("demo12345", 12);
+    const [user] = await db
+      .insert(usersTable)
+      .values({ username: "demo", passwordHash, role: "admin" })
+      .returning();
+    if (!user) throw new Error("Failed to seed demo user");
+    seedUserId = user.id;
+    seedUsername = user.username;
+    console.log(`Created seed account "demo" / "demo12345" (role: admin).`);
+  } else {
+    seedUserId = demoUser.id;
+    seedUsername = demoUser.username;
+  }
+
+  const [existingProject] = await db
+    .select({ id: projectsTable.id })
+    .from(projectsTable)
+    .where(eq(projectsTable.slug, "feature-graph-explorer"));
+  if (!existingProject) {
+    await db.insert(projectsTable).values({
+      slug: "feature-graph-explorer",
+      name: "Feature Graph Explorer",
+      description:
+        "An interactive knowledge graph over factory-managed feature databases — browse entries and the correlation chains between them.",
+      githubUrl: "https://github.com/replit/feature-graph",
+      demoUrl: "/",
+      demoType: "external",
+      ownerId: seedUserId,
+      ownerUsername: seedUsername,
+    });
+    console.log('Seeded example portfolio project "Feature Graph Explorer".');
+  }
+
   const [existing] = await db
     .select({ id: featureTablesTable.id })
     .from(featureTablesTable)
@@ -19,22 +60,6 @@ async function main() {
     console.log("Seed data already present (table 'nba-player-props' exists) — skipping.");
     await closeAndExit();
     return;
-  }
-
-  const [demoUser] = await db
-    .select({ id: usersTable.id })
-    .from(usersTable)
-    .where(eq(usersTable.username, "demo"));
-
-  let seedUsername: string | null = demoUser ? "demo" : null;
-  if (!demoUser) {
-    const passwordHash = await bcrypt.hash("demo12345", 12);
-    const [user] = await db
-      .insert(usersTable)
-      .values({ username: "demo", passwordHash, role: "admin" })
-      .returning();
-    seedUsername = user?.username ?? "demo";
-    console.log(`Created seed account "demo" / "demo12345" (role: admin).`);
   }
 
   const [table] = await db

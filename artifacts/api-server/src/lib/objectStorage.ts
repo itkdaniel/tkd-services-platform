@@ -194,6 +194,50 @@ export class ObjectStorageService {
     return normalizedPath;
   }
 
+  /**
+   * Writes a buffer directly to a caller-chosen entity id under the private
+   * object dir (bypassing the presigned-URL flow, since this is used by
+   * server-side extraction of an already-uploaded archive, not a direct
+   * client upload). `entityId` must be a relative path with no leading
+   * slash and no ".." segments — callers must sanitize it first.
+   */
+  async writeObjectEntity(entityId: string, data: Buffer, contentType: string): Promise<string> {
+    let entityDir = this.getPrivateObjectDir();
+    if (!entityDir.endsWith('/')) {
+      entityDir = `${entityDir}/`;
+    }
+    const fullPath = `${entityDir}${entityId}`;
+    const { bucketName, objectName } = parseObjectPath(fullPath);
+    const bucket = objectStorageClient.bucket(bucketName);
+    const file = bucket.file(objectName);
+    await file.save(data, { contentType, resumable: false });
+    return `/objects/${entityId}`;
+  }
+
+  /**
+   * Deletes every object stored under a project-scoped prefix (e.g. a
+   * removed sub-app's extracted files). Best-effort — logs but does not
+   * throw on individual failures, matching the cleanup pattern used
+   * elsewhere for object deletes.
+   */
+  async deleteObjectsUnderPrefix(prefix: string): Promise<void> {
+    let entityDir = this.getPrivateObjectDir();
+    if (!entityDir.endsWith('/')) {
+      entityDir = `${entityDir}/`;
+    }
+    const fullPrefix = `${entityDir}${prefix}`;
+    const { bucketName, objectName } = parseObjectPath(fullPrefix);
+    const bucket = objectStorageClient.bucket(bucketName);
+    const [files] = await bucket.getFiles({ prefix: objectName });
+    await Promise.all(
+      files.map((file) =>
+        file.delete().catch((err) => {
+          console.error(`Failed to delete object ${file.name} under prefix ${prefix}`, err);
+        }),
+      ),
+    );
+  }
+
   async canAccessObjectEntity({
     userId,
     objectFile,

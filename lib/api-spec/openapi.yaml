@@ -32,6 +32,8 @@ tags:
     description: Object storage upload and serving endpoints
   - name: resume
     description: Résumé file uploads, versioning, and admin editing
+  - name: projects
+    description: Portfolio project showcase entries and sub-app hosting
 paths:
   /healthz:
     get:
@@ -855,6 +857,253 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      summary: List portfolio projects, newest first
+      description: Public — usable by guests to render the portfolio grid.
+      responses:
+        "200":
+          description: Projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+    post:
+      operationId: createProject
+      tags: [projects]
+      summary: Create a new portfolio project (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectCreateInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /projects/{projectId}:
+    get:
+      operationId: getProject
+      tags: [projects]
+      summary: Get a single portfolio project
+      description: Public — usable by guests to render the demo page.
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateProject
+      tags: [projects]
+      summary: Edit a portfolio project (admin only)
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectUpdateInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteProject
+      tags: [projects]
+      summary: Delete a portfolio project and its stored assets (admin only)
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /projects/{projectId}/subapp:
+    post:
+      operationId: registerProjectSubapp
+      tags: [projects]
+      summary: Extract an uploaded .zip archive and serve it as this project's demo sub-app (admin only)
+      description: |
+        Called after a .zip archive has been uploaded directly to the
+        presigned URL from /storage/uploads/request-url. The server verifies
+        the upload was issued to the caller, downloads and validates the
+        archive (size limits, entry count limits, no path traversal or
+        symlinks, must contain an HTML entrypoint), extracts it into a
+        project-scoped object storage prefix, and switches the project's
+        demo to "subapp".
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectSubappUploadInput"
+      responses:
+        "200":
+          description: Sub-app registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "400":
+          description: Invalid or unsafe archive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin only, or upload was not requested by the caller
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: removeProjectSubapp
+      tags: [projects]
+      summary: Remove this project's hosted sub-app and its extracted files (admin only)
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sub-app removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /contact-messages:
     get:
       operationId: listContactMessages
@@ -1372,3 +1621,103 @@ components:
           type: array
           items:
             type: integer
+
+    Project:
+      type: object
+      required:
+        [
+          id,
+          slug,
+          name,
+          description,
+          thumbnailObjectPath,
+          githubUrl,
+          demoType,
+          demoUrl,
+          subappObjectPrefix,
+          subappEntrypoint,
+          ownerId,
+          ownerUsername,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        thumbnailObjectPath:
+          type: ["string", "null"]
+        githubUrl:
+          type: ["string", "null"]
+        demoType:
+          type: string
+          enum: [none, external, subapp]
+        demoUrl:
+          type: ["string", "null"]
+        subappObjectPrefix:
+          type: ["string", "null"]
+        subappEntrypoint:
+          type: ["string", "null"]
+        ownerId:
+          type: integer
+        ownerUsername:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    ProjectCreateInput:
+      type: object
+      required: [name, description]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        thumbnailObjectPath:
+          type: string
+        githubUrl:
+          type: string
+        demoUrl:
+          type: string
+
+    ProjectUpdateInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        thumbnailObjectPath:
+          type: ["string", "null"]
+        githubUrl:
+          type: ["string", "null"]
+        demoUrl:
+          type: ["string", "null"]
+
+    ProjectSubappUploadInput:
+      type: object
+      required: [objectPath, filename, contentType, sizeBytes]
+      properties:
+        objectPath:
+          type: string
+          minLength: 1
+        filename:
+          type: string
+          minLength: 1
+        contentType:
+          type: string
+          minLength: 1
+        sizeBytes:
+          type: integer
+          minimum: 1

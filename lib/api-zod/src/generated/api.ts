@@ -620,6 +620,205 @@ export const BulkDeleteResumeVersionsResponse = zod.object({
 
 
 /**
+ * Public — usable by guests to render the portfolio grid.
+ * @summary List portfolio projects, newest first
+ */
+export const ListProjectsResponseItem = zod.object({
+  "id": zod.number(),
+  "slug": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "thumbnailObjectPath": zod.string().nullable(),
+  "githubUrl": zod.string().nullable(),
+  "demoType": zod.enum(['none', 'external', 'subapp']),
+  "demoUrl": zod.string().nullable(),
+  "subappObjectPrefix": zod.string().nullable(),
+  "subappEntrypoint": zod.string().nullable(),
+  "ownerId": zod.number(),
+  "ownerUsername": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const ListProjectsResponse = zod.array(ListProjectsResponseItem)
+
+
+/**
+ * @summary Create a new portfolio project (admin only)
+ */
+
+
+
+
+export const CreateProjectBody = zod.object({
+  "name": zod.string().min(1),
+  "description": zod.string().min(1),
+  "thumbnailObjectPath": zod.string().optional(),
+  "githubUrl": zod.string().optional(),
+  "demoUrl": zod.string().optional()
+})
+
+export const CreateProjectResponse = zod.object({
+  "id": zod.number(),
+  "slug": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "thumbnailObjectPath": zod.string().nullable(),
+  "githubUrl": zod.string().nullable(),
+  "demoType": zod.enum(['none', 'external', 'subapp']),
+  "demoUrl": zod.string().nullable(),
+  "subappObjectPrefix": zod.string().nullable(),
+  "subappEntrypoint": zod.string().nullable(),
+  "ownerId": zod.number(),
+  "ownerUsername": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * Public — usable by guests to render the demo page.
+ * @summary Get a single portfolio project
+ */
+export const GetProjectParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const GetProjectResponse = zod.object({
+  "id": zod.number(),
+  "slug": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "thumbnailObjectPath": zod.string().nullable(),
+  "githubUrl": zod.string().nullable(),
+  "demoType": zod.enum(['none', 'external', 'subapp']),
+  "demoUrl": zod.string().nullable(),
+  "subappObjectPrefix": zod.string().nullable(),
+  "subappEntrypoint": zod.string().nullable(),
+  "ownerId": zod.number(),
+  "ownerUsername": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Edit a portfolio project (admin only)
+ */
+export const UpdateProjectParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+
+
+
+
+export const UpdateProjectBody = zod.object({
+  "name": zod.string().min(1).optional(),
+  "description": zod.string().min(1).optional(),
+  "thumbnailObjectPath": zod.string().nullish(),
+  "githubUrl": zod.string().nullish(),
+  "demoUrl": zod.string().nullish()
+})
+
+export const UpdateProjectResponse = zod.object({
+  "id": zod.number(),
+  "slug": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "thumbnailObjectPath": zod.string().nullable(),
+  "githubUrl": zod.string().nullable(),
+  "demoType": zod.enum(['none', 'external', 'subapp']),
+  "demoUrl": zod.string().nullable(),
+  "subappObjectPrefix": zod.string().nullable(),
+  "subappEntrypoint": zod.string().nullable(),
+  "ownerId": zod.number(),
+  "ownerUsername": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a portfolio project and its stored assets (admin only)
+ */
+export const DeleteProjectParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const DeleteProjectResponse = zod.void()
+
+
+/**
+ * Called after a .zip archive has been uploaded directly to the
+ * presigned URL from /storage/uploads/request-url. The server verifies
+ * the upload was issued to the caller, downloads and validates the
+ * archive (size limits, entry count limits, no path traversal or
+ * symlinks, must contain an HTML entrypoint), extracts it into a
+ * project-scoped object storage prefix, and switches the project's
+ * demo to "subapp".
+ * @summary Extract an uploaded .zip archive and serve it as this project's demo sub-app (admin only)
+ */
+export const RegisterProjectSubappParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+
+
+
+
+
+
+export const RegisterProjectSubappBody = zod.object({
+  "objectPath": zod.string().min(1),
+  "filename": zod.string().min(1),
+  "contentType": zod.string().min(1),
+  "sizeBytes": zod.number().min(1)
+})
+
+export const RegisterProjectSubappResponse = zod.object({
+  "id": zod.number(),
+  "slug": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "thumbnailObjectPath": zod.string().nullable(),
+  "githubUrl": zod.string().nullable(),
+  "demoType": zod.enum(['none', 'external', 'subapp']),
+  "demoUrl": zod.string().nullable(),
+  "subappObjectPrefix": zod.string().nullable(),
+  "subappEntrypoint": zod.string().nullable(),
+  "ownerId": zod.number(),
+  "ownerUsername": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Remove this project's hosted sub-app and its extracted files (admin only)
+ */
+export const RemoveProjectSubappParams = zod.object({
+  "projectId": zod.coerce.number()
+})
+
+export const RemoveProjectSubappResponse = zod.object({
+  "id": zod.number(),
+  "slug": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "thumbnailObjectPath": zod.string().nullable(),
+  "githubUrl": zod.string().nullable(),
+  "demoType": zod.enum(['none', 'external', 'subapp']),
+  "demoUrl": zod.string().nullable(),
+  "subappObjectPrefix": zod.string().nullable(),
+  "subappEntrypoint": zod.string().nullable(),
+  "ownerId": zod.number(),
+  "ownerUsername": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
  * @summary List submitted contact messages, newest first (admin only)
  */
 export const ListContactMessagesResponseItem = zod.object({

@@ -7,3 +7,4 @@ export * from "./blogPosts";
 export * from "./contactMessages";
 export * from "./resumeVersions";
 export * from "./objectUploadIntents";
+export * from "./projects";

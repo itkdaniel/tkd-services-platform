@@ -7,3 +7,5 @@
 - [Shared auth across artifacts](shared-auth-across-artifacts.md) — this workspace's products intentionally share one `users` table; "first user = admin" is workspace-wide, not per-product.
 - [Orval schema name collision](orval-schema-name-collision.md) — naming a component schema exactly like orval's auto-derived `<OperationId>Body/Response` name causes ambiguous duplicate exports, only caught when imported.
 - [Object storage upload confirm step must verify ownership](object-storage-confirm-ownership.md) — never trust a client-supplied objectPath in a "confirm upload" endpoint; require a server-issued, single-use intent tying path→uploader.
+- [Express wildcard doesn't match empty path](express-wildcard-empty-match.md) — `/foo/*path` 404s at the Express layer for bare `/foo` or `/foo/`; register explicit sibling routes for the zero-segment case.
+- [Isolated sub-app hosting via GCS prefix](subapp-hosting-gcs-prefix.md) — extract an uploaded archive into a unique per-resource object-storage prefix and serve it publicly, unscoped by ACLs; isolation comes from the prefix, not per-file checks.

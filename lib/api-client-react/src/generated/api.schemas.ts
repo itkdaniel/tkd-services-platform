@@ -302,6 +302,71 @@ export interface ResumeVersionsDeletedEnvelope {
   deletedIds: number[];
 }
 
+export type ProjectDemoType = typeof ProjectDemoType[keyof typeof ProjectDemoType];
+
+
+export const ProjectDemoType = {
+  none: 'none',
+  external: 'external',
+  subapp: 'subapp',
+} as const;
+
+export interface Project {
+  id: number;
+  slug: string;
+  name: string;
+  description: string;
+  /** @nullable */
+  thumbnailObjectPath: string | null;
+  /** @nullable */
+  githubUrl: string | null;
+  demoType: ProjectDemoType;
+  /** @nullable */
+  demoUrl: string | null;
+  /** @nullable */
+  subappObjectPrefix: string | null;
+  /** @nullable */
+  subappEntrypoint: string | null;
+  ownerId: number;
+  ownerUsername: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectCreateInput {
+  /** @minLength 1 */
+  name: string;
+  /** @minLength 1 */
+  description: string;
+  thumbnailObjectPath?: string;
+  githubUrl?: string;
+  demoUrl?: string;
+}
+
+export interface ProjectUpdateInput {
+  /** @minLength 1 */
+  name?: string;
+  /** @minLength 1 */
+  description?: string;
+  /** @nullable */
+  thumbnailObjectPath?: string | null;
+  /** @nullable */
+  githubUrl?: string | null;
+  /** @nullable */
+  demoUrl?: string | null;
+}
+
+export interface ProjectSubappUploadInput {
+  /** @minLength 1 */
+  objectPath: string;
+  /** @minLength 1 */
+  filename: string;
+  /** @minLength 1 */
+  contentType: string;
+  /** @minimum 1 */
+  sizeBytes: number;
+}
+
 export type GetGraphParams = {
 search?: string;
 tableId?: number;
