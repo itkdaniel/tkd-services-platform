@@ -5,3 +5,5 @@ export * from "./featureEntries";
 export * from "./entityRelations";
 export * from "./blogPosts";
 export * from "./contactMessages";
+export * from "./resumeVersions";
+export * from "./objectUploadIntents";

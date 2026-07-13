@@ -28,6 +28,10 @@ tags:
     description: TKD Services blog posts
   - name: contact
     description: TKD Services contact form submissions
+  - name: storage
+    description: Object storage upload and serving endpoints
+  - name: resume
+    description: Résumé file uploads, versioning, and admin editing
 paths:
   /healthz:
     get:
@@ -649,6 +653,208 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a presigned URL for file upload
+      description: |
+        Returns a presigned GCS URL for direct upload. The client sends JSON
+        metadata here, then uploads the file directly to the returned URL.
+        Requires a signed-in user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Presigned upload URL generated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+        "400":
+          description: Missing or invalid required fields.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Failed to generate upload URL.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /resume/current:
+    get:
+      operationId: getCurrentResume
+      tags: [resume]
+      summary: Get the résumé version currently shown to visitors
+      description: Public — usable by guests to render the résumé viewer.
+      responses:
+        "200":
+          description: Current résumé version (or null if none uploaded yet)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentResumeEnvelope"
+
+  /resume/versions:
+    get:
+      operationId: listResumeVersions
+      tags: [resume]
+      summary: List all résumé upload versions, newest first
+      description: Requires a signed-in user (owner history view).
+      responses:
+        "200":
+          description: Résumé versions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ResumeVersion"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createResumeVersion
+      tags: [resume]
+      summary: Record a résumé file that was just uploaded to object storage
+      description: |
+        Called after the file has been uploaded directly to the presigned URL
+        from /storage/uploads/request-url. The first version ever created
+        automatically becomes current; later uploads require an admin to
+        mark them current via PATCH.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResumeVersionUploadInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeVersion"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /resume/versions/{versionId}:
+    patch:
+      operationId: updateResumeVersion
+      tags: [resume]
+      summary: Edit résumé version metadata or set it as current (admin only)
+      parameters:
+        - name: versionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResumeVersionEditInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeVersion"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /resume/versions/bulk-delete:
+    post:
+      operationId: bulkDeleteResumeVersions
+      tags: [resume]
+      summary: Delete one or more résumé versions (uploader or admin only)
+      description: |
+        Regular users may only delete their own uploads; admins may delete
+        any. If the deleted set included the current version, the most
+        recently uploaded remaining version is automatically promoted to
+        current so the résumé page never goes blank.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResumeVersionIdsInput"
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeVersionsDeletedEnvelope"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not the uploader and not an admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /contact-messages:
     get:
       operationId: listContactMessages
@@ -1045,3 +1251,124 @@ components:
           type: string
           minLength: 1
           maxLength: 5000
+
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Original file name.
+        size:
+          type: integer
+          minimum: 1
+          description: File size in bytes.
+        contentType:
+          type: string
+          minLength: 1
+          description: MIME type of the file (e.g. `application/pdf`).
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+          description: Presigned GCS URL for PUT upload.
+        objectPath:
+          type: string
+          description: Normalized object path (e.g. `/objects/uploads/uuid`). Store this in your database.
+        metadata:
+          $ref: "#/components/schemas/UploadUrlRequest"
+
+    ResumeVersion:
+      type: object
+      required:
+        [
+          id,
+          objectPath,
+          filename,
+          contentType,
+          sizeBytes,
+          label,
+          isCurrent,
+          uploaderId,
+          uploaderUsername,
+          createdAt,
+        ]
+      properties:
+        id:
+          type: integer
+        objectPath:
+          type: string
+        filename:
+          type: string
+        contentType:
+          type: string
+        sizeBytes:
+          type: integer
+        label:
+          type: ["string", "null"]
+        isCurrent:
+          type: boolean
+        uploaderId:
+          type: integer
+        uploaderUsername:
+          type: string
+        createdAt:
+          type: string
+
+    ResumeVersionUploadInput:
+      type: object
+      required: [objectPath, filename, contentType, sizeBytes]
+      properties:
+        objectPath:
+          type: string
+          minLength: 1
+        filename:
+          type: string
+          minLength: 1
+        contentType:
+          type: string
+          minLength: 1
+        sizeBytes:
+          type: integer
+          minimum: 1
+        label:
+          type: string
+
+    CurrentResumeEnvelope:
+      type: object
+      required: [current]
+      properties:
+        current:
+          anyOf:
+            - $ref: "#/components/schemas/ResumeVersion"
+            - type: "null"
+
+    ResumeVersionEditInput:
+      type: object
+      properties:
+        label:
+          type: string
+        isCurrent:
+          type: boolean
+
+    ResumeVersionIdsInput:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          minItems: 1
+          items:
+            type: integer
+
+    ResumeVersionsDeletedEnvelope:
+      type: object
+      required: [deletedIds]
+      properties:
+        deletedIds:
+          type: array
+          items:
+            type: integer

@@ -12,7 +12,8 @@ import BlogList from '@/pages/blog-list';
 import BlogDetail from '@/pages/blog-detail';
 import BlogEditor from '@/pages/blog-editor';
 import { Login, Register } from '@/pages/auth';
-import { ResumePlaceholder, PortfolioPlaceholder, BookingPlaceholder } from '@/pages/placeholders';
+import { PortfolioPlaceholder, BookingPlaceholder } from '@/pages/placeholders';
+import ResumePage from '@/pages/resume';
 import NotFound from '@/pages/not-found';
 import { useGetCurrentSession } from "@workspace/api-client-react";
 import { useEffect } from 'react';
@@ -57,7 +58,7 @@ function Router() {
           <Switch>
             <Route path="/" component={Home} />
             <Route path="/about" component={About} />
-            <Route path="/resume" component={ResumePlaceholder} />
+            <Route path="/resume" component={ResumePage} />
             <Route path="/portfolio" component={PortfolioPlaceholder} />
             <Route path="/booking" component={BookingPlaceholder} />
             <Route path="/contact" component={Contact} />

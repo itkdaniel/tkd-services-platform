@@ -28,6 +28,7 @@ import type {
   BuildInfo,
   ContactMessage,
   ContactMessageInput,
+  CurrentResumeEnvelope,
   EntityRelation,
   EntryDetail,
   EntryInput,
@@ -42,7 +43,14 @@ import type {
   LoginInput,
   RegisterInput,
   RelationInput,
-  TableInput
+  ResumeVersion,
+  ResumeVersionEditInput,
+  ResumeVersionIdsInput,
+  ResumeVersionUploadInput,
+  ResumeVersionsDeletedEnvelope,
+  TableInput,
+  UploadUrlRequest,
+  UploadUrlResponse
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -1859,6 +1867,458 @@ export const useDeleteBlogPost = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getDeleteBlogPostMutationOptions(options));
+    }
+
+export const getRequestUploadUrlUrl = () => {
+
+
+
+
+  return `/api/storage/uploads/request-url`
+}
+
+/**
+ * Returns a presigned GCS URL for direct upload. The client sends JSON
+ * metadata here, then uploads the file directly to the returned URL.
+ * Requires a signed-in user.
+ * @summary Request a presigned URL for file upload
+ */
+export const requestUploadUrl = async (uploadUrlRequest: UploadUrlRequest, options?: RequestInit): Promise<UploadUrlResponse> => {
+
+  return customFetch<UploadUrlResponse>(getRequestUploadUrlUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(uploadUrlRequest)
+  }
+);}
+
+
+
+
+
+export const getRequestUploadUrlMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<UploadUrlRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<UploadUrlRequest>}, TContext> => {
+
+const mutationKey = ['requestUploadUrl'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestUploadUrl>>, {data: BodyType<UploadUrlRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestUploadUrl(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof requestUploadUrl>>>
+    export type RequestUploadUrlMutationBody = BodyType<UploadUrlRequest>
+    export type RequestUploadUrlMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Request a presigned URL for file upload
+ */
+export const useRequestUploadUrl = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<UploadUrlRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestUploadUrl>>,
+        TError,
+        {data: BodyType<UploadUrlRequest>},
+        TContext
+      > => {
+      return useMutation(getRequestUploadUrlMutationOptions(options));
+    }
+
+export const getGetCurrentResumeUrl = () => {
+
+
+
+
+  return `/api/resume/current`
+}
+
+/**
+ * Public — usable by guests to render the résumé viewer.
+ * @summary Get the résumé version currently shown to visitors
+ */
+export const getCurrentResume = async ( options?: RequestInit): Promise<CurrentResumeEnvelope> => {
+
+  return customFetch<CurrentResumeEnvelope>(getGetCurrentResumeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCurrentResumeQueryKey = () => {
+    return [
+    `/api/resume/current`
+    ] as const;
+    }
+
+
+export const getGetCurrentResumeQueryOptions = <TData = Awaited<ReturnType<typeof getCurrentResume>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCurrentResume>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCurrentResumeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCurrentResume>>> = ({ signal }) => getCurrentResume({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCurrentResume>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCurrentResumeQueryResult = NonNullable<Awaited<ReturnType<typeof getCurrentResume>>>
+export type GetCurrentResumeQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the résumé version currently shown to visitors
+ */
+
+export function useGetCurrentResume<TData = Awaited<ReturnType<typeof getCurrentResume>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCurrentResume>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCurrentResumeQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListResumeVersionsUrl = () => {
+
+
+
+
+  return `/api/resume/versions`
+}
+
+/**
+ * Requires a signed-in user (owner history view).
+ * @summary List all résumé upload versions, newest first
+ */
+export const listResumeVersions = async ( options?: RequestInit): Promise<ResumeVersion[]> => {
+
+  return customFetch<ResumeVersion[]>(getListResumeVersionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListResumeVersionsQueryKey = () => {
+    return [
+    `/api/resume/versions`
+    ] as const;
+    }
+
+
+export const getListResumeVersionsQueryOptions = <TData = Awaited<ReturnType<typeof listResumeVersions>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listResumeVersions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListResumeVersionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listResumeVersions>>> = ({ signal }) => listResumeVersions({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listResumeVersions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListResumeVersionsQueryResult = NonNullable<Awaited<ReturnType<typeof listResumeVersions>>>
+export type ListResumeVersionsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List all résumé upload versions, newest first
+ */
+
+export function useListResumeVersions<TData = Awaited<ReturnType<typeof listResumeVersions>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listResumeVersions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListResumeVersionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateResumeVersionUrl = () => {
+
+
+
+
+  return `/api/resume/versions`
+}
+
+/**
+ * Called after the file has been uploaded directly to the presigned URL
+ * from /storage/uploads/request-url. The first version ever created
+ * automatically becomes current; later uploads require an admin to
+ * mark them current via PATCH.
+ * @summary Record a résumé file that was just uploaded to object storage
+ */
+export const createResumeVersion = async (resumeVersionUploadInput: ResumeVersionUploadInput, options?: RequestInit): Promise<ResumeVersion> => {
+
+  return customFetch<ResumeVersion>(getCreateResumeVersionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(resumeVersionUploadInput)
+  }
+);}
+
+
+
+
+
+export const getCreateResumeVersionMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResumeVersion>>, TError,{data: BodyType<ResumeVersionUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createResumeVersion>>, TError,{data: BodyType<ResumeVersionUploadInput>}, TContext> => {
+
+const mutationKey = ['createResumeVersion'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createResumeVersion>>, {data: BodyType<ResumeVersionUploadInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createResumeVersion(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateResumeVersionMutationResult = NonNullable<Awaited<ReturnType<typeof createResumeVersion>>>
+    export type CreateResumeVersionMutationBody = BodyType<ResumeVersionUploadInput>
+    export type CreateResumeVersionMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Record a résumé file that was just uploaded to object storage
+ */
+export const useCreateResumeVersion = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResumeVersion>>, TError,{data: BodyType<ResumeVersionUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createResumeVersion>>,
+        TError,
+        {data: BodyType<ResumeVersionUploadInput>},
+        TContext
+      > => {
+      return useMutation(getCreateResumeVersionMutationOptions(options));
+    }
+
+export const getUpdateResumeVersionUrl = (versionId: number,) => {
+
+
+
+
+  return `/api/resume/versions/${versionId}`
+}
+
+/**
+ * @summary Edit résumé version metadata or set it as current (admin only)
+ */
+export const updateResumeVersion = async (versionId: number,
+    resumeVersionEditInput: ResumeVersionEditInput, options?: RequestInit): Promise<ResumeVersion> => {
+
+  return customFetch<ResumeVersion>(getUpdateResumeVersionUrl(versionId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(resumeVersionEditInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateResumeVersionMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateResumeVersion>>, TError,{versionId: number;data: BodyType<ResumeVersionEditInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateResumeVersion>>, TError,{versionId: number;data: BodyType<ResumeVersionEditInput>}, TContext> => {
+
+const mutationKey = ['updateResumeVersion'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateResumeVersion>>, {versionId: number;data: BodyType<ResumeVersionEditInput>}> = (props) => {
+          const {versionId,data} = props ?? {};
+
+          return  updateResumeVersion(versionId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateResumeVersionMutationResult = NonNullable<Awaited<ReturnType<typeof updateResumeVersion>>>
+    export type UpdateResumeVersionMutationBody = BodyType<ResumeVersionEditInput>
+    export type UpdateResumeVersionMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Edit résumé version metadata or set it as current (admin only)
+ */
+export const useUpdateResumeVersion = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateResumeVersion>>, TError,{versionId: number;data: BodyType<ResumeVersionEditInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateResumeVersion>>,
+        TError,
+        {versionId: number;data: BodyType<ResumeVersionEditInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateResumeVersionMutationOptions(options));
+    }
+
+export const getBulkDeleteResumeVersionsUrl = () => {
+
+
+
+
+  return `/api/resume/versions/bulk-delete`
+}
+
+/**
+ * Regular users may only delete their own uploads; admins may delete
+ * any. If the deleted set included the current version, the most
+ * recently uploaded remaining version is automatically promoted to
+ * current so the résumé page never goes blank.
+ * @summary Delete one or more résumé versions (uploader or admin only)
+ */
+export const bulkDeleteResumeVersions = async (resumeVersionIdsInput: ResumeVersionIdsInput, options?: RequestInit): Promise<ResumeVersionsDeletedEnvelope> => {
+
+  return customFetch<ResumeVersionsDeletedEnvelope>(getBulkDeleteResumeVersionsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(resumeVersionIdsInput)
+  }
+);}
+
+
+
+
+
+export const getBulkDeleteResumeVersionsMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkDeleteResumeVersions>>, TError,{data: BodyType<ResumeVersionIdsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bulkDeleteResumeVersions>>, TError,{data: BodyType<ResumeVersionIdsInput>}, TContext> => {
+
+const mutationKey = ['bulkDeleteResumeVersions'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkDeleteResumeVersions>>, {data: BodyType<ResumeVersionIdsInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  bulkDeleteResumeVersions(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BulkDeleteResumeVersionsMutationResult = NonNullable<Awaited<ReturnType<typeof bulkDeleteResumeVersions>>>
+    export type BulkDeleteResumeVersionsMutationBody = BodyType<ResumeVersionIdsInput>
+    export type BulkDeleteResumeVersionsMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Delete one or more résumé versions (uploader or admin only)
+ */
+export const useBulkDeleteResumeVersions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkDeleteResumeVersions>>, TError,{data: BodyType<ResumeVersionIdsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bulkDeleteResumeVersions>>,
+        TError,
+        {data: BodyType<ResumeVersionIdsInput>},
+        TContext
+      > => {
+      return useMutation(getBulkDeleteResumeVersionsMutationOptions(options));
     }
 
 export const getListContactMessagesUrl = () => {

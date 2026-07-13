@@ -9,6 +9,8 @@ import relationsRouter from "./relations";
 import graphRouter from "./graph";
 import blogRouter from "./blog";
 import contactRouter from "./contact";
+import storageRouter from "./storage";
+import resumeRouter from "./resume";
 
 const router: IRouter = Router();
 
@@ -22,5 +24,7 @@ router.use(relationsRouter);
 router.use(graphRouter);
 router.use(blogRouter);
 router.use(contactRouter);
+router.use(storageRouter);
+router.use(resumeRouter);
 
 export default router;

@@ -468,6 +468,158 @@ export const DeleteBlogPostResponse = zod.void()
 
 
 /**
+ * Returns a presigned GCS URL for direct upload. The client sends JSON
+ * metadata here, then uploads the file directly to the returned URL.
+ * Requires a signed-in user.
+ * @summary Request a presigned URL for file upload
+ */
+
+
+
+
+
+export const RequestUploadUrlBody = zod.object({
+  "name": zod.string().min(1).describe('Original file name.'),
+  "size": zod.number().min(1).describe('File size in bytes.'),
+  "contentType": zod.string().min(1).describe('MIME type of the file (e.g. `application\/pdf`).')
+})
+
+
+
+
+
+
+export const RequestUploadUrlResponse = zod.object({
+  "uploadURL": zod.string().describe('Presigned GCS URL for PUT upload.'),
+  "objectPath": zod.string().describe('Normalized object path (e.g. `\/objects\/uploads\/uuid`). Store this in your database.'),
+  "metadata": zod.object({
+  "name": zod.string().min(1).describe('Original file name.'),
+  "size": zod.number().min(1).describe('File size in bytes.'),
+  "contentType": zod.string().min(1).describe('MIME type of the file (e.g. `application\/pdf`).')
+}).optional()
+})
+
+
+/**
+ * Public — usable by guests to render the résumé viewer.
+ * @summary Get the résumé version currently shown to visitors
+ */
+export const GetCurrentResumeResponse = zod.object({
+  "current": zod.union([zod.object({
+  "id": zod.number(),
+  "objectPath": zod.string(),
+  "filename": zod.string(),
+  "contentType": zod.string(),
+  "sizeBytes": zod.number(),
+  "label": zod.string().nullable(),
+  "isCurrent": zod.boolean(),
+  "uploaderId": zod.number(),
+  "uploaderUsername": zod.string(),
+  "createdAt": zod.string()
+}),zod.null()])
+})
+
+
+/**
+ * Requires a signed-in user (owner history view).
+ * @summary List all résumé upload versions, newest first
+ */
+export const ListResumeVersionsResponseItem = zod.object({
+  "id": zod.number(),
+  "objectPath": zod.string(),
+  "filename": zod.string(),
+  "contentType": zod.string(),
+  "sizeBytes": zod.number(),
+  "label": zod.string().nullable(),
+  "isCurrent": zod.boolean(),
+  "uploaderId": zod.number(),
+  "uploaderUsername": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListResumeVersionsResponse = zod.array(ListResumeVersionsResponseItem)
+
+
+/**
+ * Called after the file has been uploaded directly to the presigned URL
+ * from /storage/uploads/request-url. The first version ever created
+ * automatically becomes current; later uploads require an admin to
+ * mark them current via PATCH.
+ * @summary Record a résumé file that was just uploaded to object storage
+ */
+
+
+
+
+
+
+export const CreateResumeVersionBody = zod.object({
+  "objectPath": zod.string().min(1),
+  "filename": zod.string().min(1),
+  "contentType": zod.string().min(1),
+  "sizeBytes": zod.number().min(1),
+  "label": zod.string().optional()
+})
+
+export const CreateResumeVersionResponse = zod.object({
+  "id": zod.number(),
+  "objectPath": zod.string(),
+  "filename": zod.string(),
+  "contentType": zod.string(),
+  "sizeBytes": zod.number(),
+  "label": zod.string().nullable(),
+  "isCurrent": zod.boolean(),
+  "uploaderId": zod.number(),
+  "uploaderUsername": zod.string(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Edit résumé version metadata or set it as current (admin only)
+ */
+export const UpdateResumeVersionParams = zod.object({
+  "versionId": zod.coerce.number()
+})
+
+export const UpdateResumeVersionBody = zod.object({
+  "label": zod.string().optional(),
+  "isCurrent": zod.boolean().optional()
+})
+
+export const UpdateResumeVersionResponse = zod.object({
+  "id": zod.number(),
+  "objectPath": zod.string(),
+  "filename": zod.string(),
+  "contentType": zod.string(),
+  "sizeBytes": zod.number(),
+  "label": zod.string().nullable(),
+  "isCurrent": zod.boolean(),
+  "uploaderId": zod.number(),
+  "uploaderUsername": zod.string(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * Regular users may only delete their own uploads; admins may delete
+ * any. If the deleted set included the current version, the most
+ * recently uploaded remaining version is automatically promoted to
+ * current so the résumé page never goes blank.
+ * @summary Delete one or more résumé versions (uploader or admin only)
+ */
+
+
+
+export const BulkDeleteResumeVersionsBody = zod.object({
+  "ids": zod.array(zod.number()).min(1)
+})
+
+export const BulkDeleteResumeVersionsResponse = zod.object({
+  "deletedIds": zod.array(zod.number())
+})
+
+
+/**
  * @summary List submitted contact messages, newest first (admin only)
  */
 export const ListContactMessagesResponseItem = zod.object({

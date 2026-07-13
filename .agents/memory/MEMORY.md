@@ -5,3 +5,5 @@
 - [Wouter v3 nested Switch routing gotcha](wouter-v3-nested-routes.md) — outer `<Route nest>` for a shared layout must use `path="/"`, not a wildcard, or every path silently renders the root route.
 - [drizzle-kit push fails with untracked tables](drizzle-push-interactive-prompt.md) — untracked tables (e.g. manual `sessions`) make `push`/`push --force` hang on an unanswerable TTY prompt; create new tables via raw SQL instead.
 - [Shared auth across artifacts](shared-auth-across-artifacts.md) — this workspace's products intentionally share one `users` table; "first user = admin" is workspace-wide, not per-product.
+- [Orval schema name collision](orval-schema-name-collision.md) — naming a component schema exactly like orval's auto-derived `<OperationId>Body/Response` name causes ambiguous duplicate exports, only caught when imported.
+- [Object storage upload confirm step must verify ownership](object-storage-confirm-ownership.md) — never trust a client-supplied objectPath in a "confirm upload" endpoint; require a server-issued, single-use intent tying path→uploader.
