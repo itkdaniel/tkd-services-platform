@@ -1,0 +1,48 @@
+# REFERENCE ONLY — not applied on Replit. Illustrates a Kubernetes Deployment
+# for the API server on a self-managed cluster.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: feature-graph-api
+  labels:
+    app: feature-graph-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: feature-graph-api
+  template:
+    metadata:
+      labels:
+        app: feature-graph-api
+    spec:
+      containers:
+        - name: api-server
+          image: feature-graph-api:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "8080"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: feature-graph-secrets
+                  key: database-url
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: feature-graph-secrets
+                  key: session-secret
+          readinessProbe:
+            httpGet:
+              path: /api/healthz
+              port: 8080
+            initialDelaySeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/healthz
+              port: 8080
+            initialDelaySeconds: 10

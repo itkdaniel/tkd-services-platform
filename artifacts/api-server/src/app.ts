@@ -1,10 +1,20 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import { pool } from "@workspace/db";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { attachUser } from "./middlewares/auth";
 
 const app: Express = express();
+
+if (!process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET must be set. Did you forget to provision it?");
+}
+
+const PgSession = connectPgSimple(session);
 
 app.use(
   pinoHttp({
@@ -28,6 +38,23 @@ app.use(
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(
+  session({
+    // The "sessions" table is created out-of-band (see README) rather than via
+    // createTableIfMissing: that option reads a bundled .sql file from disk at
+    // runtime, which esbuild's single-file bundle output doesn't include.
+    store: new PgSession({ pool, tableName: "sessions", createTableIfMissing: false }),
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    },
+  }),
+);
+app.use(attachUser);
 
 app.use("/api", router);
 

@@ -3,13 +3,27 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Feature Graph API — factory-managed feature databases and a knowledge graph over their entries
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: meta
+    description: Build metadata
+  - name: auth
+    description: Authentication and session
+  - name: tables
+    description: Feature database (table) management
+  - name: fields
+    description: Dynamic field definitions for a table
+  - name: entries
+    description: Data entries (graph nodes) within a table
+  - name: relations
+    description: Directed relations between entries (graph edges)
+  - name: graph
+    description: Knowledge graph queries
 paths:
   /healthz:
     get:
@@ -24,6 +38,460 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /build-info:
+    get:
+      operationId: getBuildInfo
+      tags: [meta]
+      summary: Build information
+      description: Returns version, environment, and build metadata for this deployment
+      responses:
+        "200":
+          description: Build info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuildInfo"
+
+  /auth/register:
+    post:
+      operationId: registerUser
+      tags: [auth]
+      summary: Register a new account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Username taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: loginUser
+      tags: [auth]
+      summary: Log in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logoutUser
+      tags: [auth]
+      summary: Log out
+      responses:
+        "204":
+          description: Logged out
+
+  /auth/me:
+    get:
+      operationId: getCurrentSession
+      tags: [auth]
+      summary: Get the current session (user or guest)
+      responses:
+        "200":
+          description: Current session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+
+  /tables:
+    get:
+      operationId: listTables
+      tags: [tables]
+      summary: List feature databases (tables)
+      responses:
+        "200":
+          description: Tables
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FeatureTable"
+    post:
+      operationId: createTable
+      tags: [tables]
+      summary: Create a new feature database (table) — factory entrypoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TableInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureTable"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Table with this slug already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tables/{tableId}:
+    get:
+      operationId: getTable
+      tags: [tables]
+      summary: Get a table by id
+      parameters:
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Table
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureTable"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteTable
+      tags: [tables]
+      summary: Delete a table and its fields, entries, and relations
+      parameters:
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tables/{tableId}/fields:
+    get:
+      operationId: listFields
+      tags: [fields]
+      summary: List field definitions for a table
+      parameters:
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Fields
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FeatureField"
+    post:
+      operationId: createField
+      tags: [fields]
+      summary: Add a new field to an existing table
+      parameters:
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FieldInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureField"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Table not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tables/{tableId}/entries:
+    get:
+      operationId: listEntries
+      tags: [entries]
+      summary: List entries (nodes) belonging to a table
+      parameters:
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FeatureEntry"
+    post:
+      operationId: createEntry
+      tags: [entries]
+      summary: Add a data entry (graph node) to a table
+      parameters:
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EntryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureEntry"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Table not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /entries/{entryId}:
+    get:
+      operationId: getEntry
+      tags: [entries]
+      summary: Get full detail for one entry — used by the graph node detail popup
+      parameters:
+        - name: entryId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Entry detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntryDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteEntry
+      tags: [entries]
+      summary: Delete an entry and its relations
+      parameters:
+        - name: entryId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /relations:
+    get:
+      operationId: listRelations
+      tags: [relations]
+      summary: List directed relations between entries
+      responses:
+        "200":
+          description: Relations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EntityRelation"
+    post:
+      operationId: createRelation
+      tags: [relations]
+      summary: Create a directed relation (edge) between two entries
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RelationInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityRelation"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Entry not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /graph:
+    get:
+      operationId: getGraph
+      tags: [graph]
+      summary: Fetch nodes and edges for the knowledge graph visualization
+      description: Supports free-text search across entry labels and optional filtering by table
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: tableId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 500
+      responses:
+        "200":
+          description: Graph data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GraphData"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +502,267 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    BuildInfo:
+      type: object
+      required: [version, environment, buildTime]
+      properties:
+        version:
+          type: string
+        environment:
+          type: string
+        buildTime:
+          type: string
+        commit:
+          type: ["string", "null"]
+
+    UserRole:
+      type: string
+      enum: [admin, user, guest]
+
+    AuthUser:
+      type: object
+      required: [id, username, role, createdAt]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        role:
+          $ref: "#/components/schemas/UserRole"
+        createdAt:
+          type: string
+
+    AuthSession:
+      type: object
+      required: [user]
+      properties:
+        user:
+          anyOf:
+            - $ref: "#/components/schemas/AuthUser"
+            - type: "null"
+
+    RegisterInput:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 40
+        password:
+          type: string
+          minLength: 8
+
+    LoginInput:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    FeatureTable:
+      type: object
+      required: [id, name, slug, category, createdBy, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: ["string", "null"]
+        category:
+          type: string
+        createdBy:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    TableInput:
+      type: object
+      required: [name, category]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        category:
+          type: string
+          minLength: 1
+
+    FieldDataType:
+      type: string
+      enum: [string, number, boolean, date, json]
+
+    FeatureField:
+      type: object
+      required: [id, tableId, name, dataType, required, createdAt]
+      properties:
+        id:
+          type: integer
+        tableId:
+          type: integer
+        name:
+          type: string
+        dataType:
+          $ref: "#/components/schemas/FieldDataType"
+        description:
+          type: ["string", "null"]
+        required:
+          type: boolean
+        createdAt:
+          type: string
+
+    FieldInput:
+      type: object
+      required: [name, dataType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        dataType:
+          $ref: "#/components/schemas/FieldDataType"
+        description:
+          type: string
+        required:
+          type: boolean
+          default: false
+
+    FeatureEntry:
+      type: object
+      required: [id, tableId, label, data, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        tableId:
+          type: integer
+        label:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    EntryInput:
+      type: object
+      required: [label, data]
+      properties:
+        label:
+          type: string
+          minLength: 1
+        data:
+          type: object
+          additionalProperties: true
+
+    EntryDetail:
+      type: object
+      required: [entry, table, outgoing, incoming]
+      properties:
+        entry:
+          $ref: "#/components/schemas/FeatureEntry"
+        table:
+          $ref: "#/components/schemas/FeatureTable"
+        outgoing:
+          type: array
+          items:
+            $ref: "#/components/schemas/EntityRelation"
+        incoming:
+          type: array
+          items:
+            $ref: "#/components/schemas/EntityRelation"
+
+    EntityRelation:
+      type: object
+      required: [id, fromEntryId, toEntryId, relationType, createdAt]
+      properties:
+        id:
+          type: integer
+        fromEntryId:
+          type: integer
+        toEntryId:
+          type: integer
+        relationType:
+          type: string
+        weight:
+          type: ["number", "null"]
+        justification:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    RelationInput:
+      type: object
+      required: [fromEntryId, toEntryId, relationType]
+      properties:
+        fromEntryId:
+          type: integer
+        toEntryId:
+          type: integer
+        relationType:
+          type: string
+          minLength: 1
+        weight:
+          type: number
+          minimum: 0
+          maximum: 1
+        justification:
+          type: string
+
+    GraphNode:
+      type: object
+      required: [id, label, tableId, tableName, category]
+      properties:
+        id:
+          type: integer
+        label:
+          type: string
+        tableId:
+          type: integer
+        tableName:
+          type: string
+        category:
+          type: string
+
+    GraphEdge:
+      type: object
+      required: [id, source, target, relationType]
+      properties:
+        id:
+          type: integer
+        source:
+          type: integer
+        target:
+          type: integer
+        relationType:
+          type: string
+        weight:
+          type: ["number", "null"]
+        justification:
+          type: ["string", "null"]
+
+    GraphData:
+      type: object
+      required: [nodes, edges]
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/GraphNode"
+        edges:
+          type: array
+          items:
+            $ref: "#/components/schemas/GraphEdge"

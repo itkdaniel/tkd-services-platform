@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Feature Graph"
+version = "1.0.0"
+id = "artifacts/feature-graph"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22292
+
+[services.development]
+run = "pnpm --filter @workspace/feature-graph run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/feature-graph", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/feature-graph/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22292"
+BASE_PATH = "/"

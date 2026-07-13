@@ -1,0 +1,4 @@
+- [connect-pg-simple bundling gotcha](connect-pg-simple-bundling.md) — `createTableIfMissing: true` breaks under esbuild bundling; create the sessions table manually instead.
+- [Canvas 2D context can't use CSS vars](canvas-css-vars.md) — `ctx.font`/`ctx.fillStyle` must be literal values, never `var(--token)`, or text/backgrounds render wrong.
+- [Drizzle timestamp vs generated Zod schemas](drizzle-date-serialization.md) — Drizzle returns `Date` objects but codegen'd response schemas expect ISO strings; serialize before validating.
+- [Orval-generated ApiError shape](orval-api-error-shape.md) — error message lives at `err.message` (or `err.data`), not `err.error`; don't guess the shape from convention.

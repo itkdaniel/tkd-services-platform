@@ -1,0 +1,10 @@
+[project]
+name = "feature-graph-workspace"
+version = "0.1.0"
+description = "Feature Graph monorepo Python tooling (CLI client for the Feature Graph API)."
+requires-python = ">=3.11"
+dependencies = [
+    "click>=8.4.2",
+    "requests>=2.34.2",
+    "rich>=15.0.0",
+]

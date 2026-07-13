@@ -1,0 +1,32 @@
+# REFERENCE ONLY — not used on Replit. Illustrates how to self-host the API
+# server plus a Postgres instance outside of Replit.
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: feature_graph
+      POSTGRES_USER: feature_graph
+      POSTGRES_PASSWORD: change-me
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api-server:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.api-server
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgres://feature_graph:change-me@postgres:5432/feature_graph
+      SESSION_SECRET: change-me-too
+      NODE_ENV: production
+      PORT: 8080
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:

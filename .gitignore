@@ -11,6 +11,13 @@ out-tsc
 # dependencies
 node_modules
 
+# python
+.pythonlibs
+__pycache__
+*.pyc
+.venv
+uv.lock
+
 # IDEs and editors
 /.idea
 .project

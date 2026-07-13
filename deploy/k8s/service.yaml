@@ -1,0 +1,12 @@
+# REFERENCE ONLY — not applied on Replit.
+apiVersion: v1
+kind: Service
+metadata:
+  name: feature-graph-api
+spec:
+  selector:
+    app: feature-graph-api
+  ports:
+    - port: 80
+      targetPort: 8080
+  type: ClusterIP

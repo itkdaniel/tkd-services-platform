@@ -1,0 +1,147 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap');
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card-border: hsl(var(--card-border));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-popover-border: hsl(var(--popover-border));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary-border: var(--primary-border);
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-secondary-border: var(--secondary-border);
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-muted-border: var(--muted-border);
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-accent-border: var(--accent-border);
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-destructive-border: var(--destructive-border);
+
+  --font-sans: var(--app-font-sans);
+  --font-serif: var(--app-font-serif);
+  --font-mono: var(--app-font-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --app-font-sans: 'Plus Jakarta Sans', sans-serif;
+  --app-font-mono: 'Spline Sans Mono', monospace;
+  
+  --background: 45 29% 97%; /* #FAF9F6 */
+  --foreground: 0 0% 10%;
+  
+  --border: 210 20% 85%;
+  --input: 210 20% 85%;
+  --ring: 222 88% 33%;
+  
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 10%;
+  --card-border: 210 20% 85%;
+  
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 10%;
+  --popover-border: 210 20% 85%;
+  
+  --primary: 222 88% 33%; /* #0A369D */
+  --primary-foreground: 0 0% 100%;
+  
+  --secondary: 210 20% 90%;
+  --secondary-foreground: 222 88% 33%;
+  
+  --muted: 45 20% 90%;
+  --muted-foreground: 215 16% 47%;
+  
+  --accent: 11 100% 61%; /* #FF5A36 */
+  --accent-foreground: 0 0% 100%;
+  
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  --sidebar: 222 88% 15%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-border: 222 88% 10%;
+  --sidebar-primary: 222 88% 33%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 222 88% 25%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-ring: 11 100% 61%;
+  
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: 222 88% 5%;
+  --foreground: 210 20% 90%;
+  
+  --border: 222 88% 15%;
+  --input: 222 88% 15%;
+  --ring: 11 100% 61%;
+  
+  --card: 222 88% 8%;
+  --card-foreground: 210 20% 90%;
+  --card-border: 222 88% 15%;
+  
+  --popover: 222 88% 8%;
+  --popover-foreground: 210 20% 90%;
+  --popover-border: 222 88% 15%;
+  
+  --primary: 222 88% 60%;
+  --primary-foreground: 0 0% 100%;
+  
+  --secondary: 222 88% 15%;
+  --secondary-foreground: 210 20% 90%;
+  
+  --muted: 222 88% 15%;
+  --muted-foreground: 215 16% 65%;
+  
+  --accent: 11 100% 61%;
+  --accent-foreground: 0 0% 100%;
+  
+  --destructive: 0 62% 30%;
+  --destructive-foreground: 210 20% 90%;
+  
+  --sidebar: 222 88% 5%;
+  --sidebar-foreground: 210 20% 90%;
+  --sidebar-border: 222 88% 15%;
+  --sidebar-primary: 222 88% 60%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 222 88% 15%;
+  --sidebar-accent-foreground: 210 20% 90%;
+  --sidebar-ring: 11 100% 61%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}

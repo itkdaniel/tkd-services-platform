@@ -1,0 +1,22 @@
+# REFERENCE ONLY — not built or run on Replit. Replit deploys this project
+# through its own managed deployment system; this Dockerfile is provided so
+# the API server can be containerized on non-Replit infrastructure.
+#
+# Build from the monorepo root:
+#   docker build -f deploy/docker/Dockerfile.api-server -t feature-graph-api .
+
+FROM node:24-slim AS build
+WORKDIR /app
+RUN corepack enable
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY lib ./lib
+COPY artifacts/api-server ./artifacts/api-server
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @workspace/api-server run build
+
+FROM node:24-slim AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build /app/artifacts/api-server/dist ./dist
+EXPOSE 8080
+CMD ["node", "--enable-source-maps", "./dist/index.mjs"]
