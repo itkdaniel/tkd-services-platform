@@ -367,9 +367,96 @@ export interface ProjectSubappUploadInput {
   sizeBytes: number;
 }
 
+export interface BookingSlot {
+  start: string;
+  end: string;
+  available: boolean;
+}
+
+export interface BookingAvailability {
+  slots: BookingSlot[];
+}
+
+export interface BookingAppointmentInput {
+  /** @minLength 1 */
+  title: string;
+  reason?: string;
+  /** @minLength 1 */
+  name: string;
+  email: string;
+  start: string;
+}
+
+export type BookingAppointmentStatus = typeof BookingAppointmentStatus[keyof typeof BookingAppointmentStatus];
+
+
+export const BookingAppointmentStatus = {
+  confirmed: 'confirmed',
+  cancelled: 'cancelled',
+} as const;
+
+export interface BookingAppointment {
+  id: number;
+  title: string;
+  /** @nullable */
+  reason: string | null;
+  guestName: string;
+  guestEmail: string;
+  /** @nullable */
+  externalUserId: string | null;
+  /** @nullable */
+  externalUserLabel: string | null;
+  start: string;
+  end: string;
+  status: BookingAppointmentStatus;
+  createdAt: string;
+}
+
+export type BookingNotificationKind = typeof BookingNotificationKind[keyof typeof BookingNotificationKind];
+
+
+export const BookingNotificationKind = {
+  new_booking: 'new_booking',
+  reminder_day_before: 'reminder_day_before',
+  reminder_hours_before: 'reminder_hours_before',
+} as const;
+
+export type BookingNotificationRecipient = typeof BookingNotificationRecipient[keyof typeof BookingNotificationRecipient];
+
+
+export const BookingNotificationRecipient = {
+  guest: 'guest',
+  admin: 'admin',
+} as const;
+
+export interface BookingNotification {
+  id: number;
+  appointmentId: number;
+  kind: BookingNotificationKind;
+  recipient: BookingNotificationRecipient;
+  subject: string;
+  message: string;
+  emailSent: boolean;
+  read: boolean;
+  createdAt: string;
+}
+
 export type GetGraphParams = {
 search?: string;
 tableId?: number;
 limit?: number;
+};
+
+export type GetBookingAvailabilityParams = {
+from: string;
+to: string;
+};
+
+export type ListBookingAppointmentsParams = {
+upcomingOnly?: boolean;
+};
+
+export type ListBookingNotificationsParams = {
+unreadOnly?: boolean;
 };
 

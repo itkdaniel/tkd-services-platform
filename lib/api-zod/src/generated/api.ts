@@ -858,3 +858,114 @@ export const CreateContactMessageResponse = zod.object({
 })
 
 
+/**
+ * @summary List booking slots (open and closed) in a date range
+ */
+export const GetBookingAvailabilityQueryParams = zod.object({
+  "from": zod.coerce.string(),
+  "to": zod.coerce.string()
+})
+
+export const GetBookingAvailabilityResponse = zod.object({
+  "slots": zod.array(zod.object({
+  "start": zod.string(),
+  "end": zod.string(),
+  "available": zod.boolean()
+}))
+})
+
+
+/**
+ * @summary List appointments (admin only)
+ */
+export const ListBookingAppointmentsQueryParams = zod.object({
+  "upcomingOnly": zod.coerce.boolean().optional()
+})
+
+export const ListBookingAppointmentsResponseItem = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "reason": zod.string().nullable(),
+  "guestName": zod.string(),
+  "guestEmail": zod.string(),
+  "externalUserId": zod.string().nullable(),
+  "externalUserLabel": zod.string().nullable(),
+  "start": zod.string(),
+  "end": zod.string(),
+  "status": zod.enum(['confirmed', 'cancelled']),
+  "createdAt": zod.string()
+})
+export const ListBookingAppointmentsResponse = zod.array(ListBookingAppointmentsResponseItem)
+
+
+/**
+ * @summary Book an appointment slot (guests or signed-in users)
+ */
+
+
+
+
+export const CreateBookingAppointmentBody = zod.object({
+  "title": zod.string().min(1),
+  "reason": zod.string().optional(),
+  "name": zod.string().min(1),
+  "email": zod.string(),
+  "start": zod.string()
+})
+
+export const CreateBookingAppointmentResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "reason": zod.string().nullable(),
+  "guestName": zod.string(),
+  "guestEmail": zod.string(),
+  "externalUserId": zod.string().nullable(),
+  "externalUserLabel": zod.string().nullable(),
+  "start": zod.string(),
+  "end": zod.string(),
+  "status": zod.enum(['confirmed', 'cancelled']),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary List booking inbox notifications (admin only)
+ */
+export const ListBookingNotificationsQueryParams = zod.object({
+  "unreadOnly": zod.coerce.boolean().optional()
+})
+
+export const ListBookingNotificationsResponseItem = zod.object({
+  "id": zod.number(),
+  "appointmentId": zod.number(),
+  "kind": zod.enum(['new_booking', 'reminder_day_before', 'reminder_hours_before']),
+  "recipient": zod.enum(['guest', 'admin']),
+  "subject": zod.string(),
+  "message": zod.string(),
+  "emailSent": zod.boolean(),
+  "read": zod.boolean(),
+  "createdAt": zod.string()
+})
+export const ListBookingNotificationsResponse = zod.array(ListBookingNotificationsResponseItem)
+
+
+/**
+ * @summary Mark a booking inbox notification as read (admin only)
+ */
+export const MarkBookingNotificationReadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const MarkBookingNotificationReadResponse = zod.object({
+  "id": zod.number(),
+  "appointmentId": zod.number(),
+  "kind": zod.enum(['new_booking', 'reminder_day_before', 'reminder_hours_before']),
+  "recipient": zod.enum(['guest', 'admin']),
+  "subject": zod.string(),
+  "message": zod.string(),
+  "emailSent": zod.boolean(),
+  "read": zod.boolean(),
+  "createdAt": zod.string()
+})
+
+

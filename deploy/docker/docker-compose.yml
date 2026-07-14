@@ -25,8 +25,33 @@ services:
       SESSION_SECRET: change-me-too
       NODE_ENV: production
       PORT: 8080
+      BOOKING_SERVICE_URL: http://booking-service:8000
+      BOOKING_SERVICE_API_KEY: change-me-booking-key
     ports:
       - "8080:8080"
+
+  # Standalone booking/appointments microservice — see artifacts/booking-service/README.md.
+  # It owns its own schema in the same Postgres instance here for simplicity, but ships with its
+  # own Dockerfile/env so it can just as easily point at a different database in another project.
+  booking-service:
+    build:
+      context: ../../artifacts/booking-service
+      dockerfile: Dockerfile
+    depends_on:
+      - postgres
+    environment:
+      BOOKING_DATABASE_URL: postgres://feature_graph:change-me@postgres:5432/feature_graph
+      BOOKING_SERVICE_API_KEY: change-me-booking-key
+      PORT: 8000
+      ADMIN_NOTIFICATION_EMAIL: admin@example.com
+      EMAIL_PROVIDER: smtp
+      EMAIL_FROM: bookings@example.com
+      SMTP_HOST: smtp.example.com
+      SMTP_PORT: 587
+      SMTP_USER: change-me
+      SMTP_PASS: change-me
+    ports:
+      - "8000:8000"
 
 volumes:
   pgdata:

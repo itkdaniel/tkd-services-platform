@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Clock, CalendarDays, Briefcase, FileText } from "lucide-react";
+import { ArrowLeft, Briefcase, FileText } from "lucide-react";
 
 export function ComingSoon({ 
   title, 
@@ -55,13 +55,5 @@ export function PortfolioPlaceholder() {
     title="Selected Works" 
     description="I am currently curating case studies and project summaries. The interactive portfolio showcase is actively being built."
     icon={Briefcase}
-  />;
-}
-
-export function BookingPlaceholder() {
-  return <ComingSoon 
-    title="Schedule a Call" 
-    description="The automated scheduling system is being configured. For now, please use the contact form to arrange a meeting."
-    icon={CalendarDays}
   />;
 }

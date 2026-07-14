@@ -62,6 +62,11 @@ export function Navbar() {
 
           {session?.user ? (
             <div className="flex items-center gap-4">
+              {session.user.role === "admin" && (
+                <Link href="/admin/bookings" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                  Bookings Inbox
+                </Link>
+              )}
               <span className="text-sm text-muted-foreground">
                 {session.user.username} {session.user.role === "admin" && <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full ml-1">Admin</span>}
               </span>
@@ -111,6 +116,15 @@ export function Navbar() {
                   <div className="text-sm text-muted-foreground py-2">
                     Signed in as {session.user.username}
                   </div>
+                  {session.user.role === "admin" && (
+                    <Link
+                      href="/admin/bookings"
+                      className="text-lg font-medium py-2 border-b border-border/50"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Bookings Inbox
+                    </Link>
+                  )}
                   <Button variant="outline" onClick={handleLogout} className="justify-start">Log out</Button>
                 </>
               ) : (

@@ -12,6 +12,7 @@ import contactRouter from "./contact";
 import storageRouter from "./storage";
 import resumeRouter from "./resume";
 import projectsRouter from "./projects";
+import bookingRouter from "./booking";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(contactRouter);
 router.use(storageRouter);
 router.use(resumeRouter);
 router.use(projectsRouter);
+router.use(bookingRouter);
 
 export default router;

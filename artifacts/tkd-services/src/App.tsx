@@ -12,7 +12,8 @@ import BlogList from '@/pages/blog-list';
 import BlogDetail from '@/pages/blog-detail';
 import BlogEditor from '@/pages/blog-editor';
 import { Login, Register } from '@/pages/auth';
-import { BookingPlaceholder } from '@/pages/placeholders';
+import Booking from '@/pages/booking';
+import AdminBookings from '@/pages/admin-bookings';
 import ResumePage from '@/pages/resume';
 import Portfolio from '@/pages/portfolio';
 import ProjectDemo from '@/pages/project-demo';
@@ -63,7 +64,10 @@ function Router() {
             <Route path="/resume" component={ResumePage} />
             <Route path="/portfolio" component={Portfolio} />
             <Route path="/portfolio/:projectId/demo" component={ProjectDemo} />
-            <Route path="/booking" component={BookingPlaceholder} />
+            <Route path="/booking" component={Booking} />
+            <Route path="/admin/bookings">
+              <AdminRoute component={AdminBookings} />
+            </Route>
             <Route path="/contact" component={Contact} />
             
             <Route path="/blog" component={BlogList} />
