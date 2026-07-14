@@ -1,186 +1,204 @@
-# Feature Graph
+# TKD Services
 
-A knowledge-graph platform for feature engineering: define typed data
-tables, populate them with entries, connect entries with weighted/justified
-relations, and explore the resulting graph — from a web UI, a CLI, or the
-HTTP API directly. Ships with an NBA player-props dataset as a worked
-example of a feature-engineering domain.
+A personal portfolio / independent-consulting website with a résumé
+manager, a project portfolio, a blog, a contact form, and call-booking —
+plus a small internal dev tooling suite (test status dashboard, feature
+graph explorer, mockup sandbox) used while building the product, not part
+of what a visitor sees.
 
 ## What's built
 
-| Piece | Where | Status |
+| Piece | Where | Notes |
 |---|---|---|
-| HTTP API (auth, tables, fields, entries, relations, graph query) | `artifacts/api-server` | Built & running |
-| Web UI (graph explorer, table/field/entry management, auth) | `artifacts/feature-graph` | Built & running |
-| Postgres schema (Drizzle ORM) | `lib/db` | Built & pushed |
-| Session-based auth with roles (admin/user/guest) | `artifacts/api-server/src/middlewares/auth.ts` | Built |
-| Python CLI | `cli/` | Built |
-| Seed data (NBA player props example) | `artifacts/api-server/src/scripts/seed.ts` | Built |
-| Docker / Kubernetes / GitHub Actions | `deploy/` | **Reference only** — see below |
+| Public site (hero, about, portfolio, blog, contact) | `artifacts/tkd-services` | React + Vite frontend |
+| Résumé manager (upload, version, publish) | `artifacts/tkd-services` (admin UI) + `artifacts/api-server/src/routes/resume.ts` | Uploads go through Object Storage |
+| Portfolio projects (CRUD) | `artifacts/api-server/src/routes/projects.ts` | |
+| Blog (CRUD) | `artifacts/api-server/src/routes/blog.ts` | |
+| Contact form | `artifacts/api-server/src/routes/contact.ts` | |
+| Auth (sessions, roles) | `artifacts/api-server/src/routes/auth.ts` | First registered user becomes admin |
+| Call booking | `artifacts/booking-service` (proxied by `artifacts/api-server/src/routes/booking.ts`) | Standalone microservice, own DB, own repo |
+| Object storage (résumé PDFs, images) | `artifacts/api-server/src/lib/objectStorage.ts` | Replit-managed GCS bucket |
+| Test status dashboard (internal) | `artifacts/status-dashboard` | Not part of the public site |
+| Feature/graph explorer (internal) | `artifacts/feature-graph` | Not part of the public site |
+| Design/mockup sandbox (internal) | `artifacts/mockup-sandbox` | Not part of the public site |
+| Docker / Kubernetes / GitHub Actions | `deploy/`, root `docker-compose.yml`, `.github/workflows/` | Reference tooling for running this off Replit — see below |
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    subgraph Clients
-        Web[Web UI\nartifacts/feature-graph]
-        CLI[Python CLI\ncli/]
+    subgraph Client
+        Web[tkd-services web app]
     end
-    subgraph Server[artifacts/api-server]
-        Auth[Session auth + RBAC]
-        Routes[REST routes\ntables / fields / entries / relations / graph]
-        Cache[In-process TTL cache]
+    subgraph Backend[artifacts/api-server]
+        Auth[Session auth + roles]
+        Routes[REST routes\nblog / projects / resume / contact / storage]
+        BookingProxy[booking proxy]
     end
-    DB[(PostgreSQL\nlib/db)]
+    subgraph Booking[artifacts/booking-service — standalone microservice]
+        BookingAPI[availability / appointments / notifications]
+        Scheduler[reminder cron]
+    end
+    DB[(Postgres — main app)]
+    BookingDB[(Postgres — booking)]
+    GCS[(Object Storage — résumé/portfolio files)]
 
-    Web -- HTTP + session cookie --> Server
-    CLI -- HTTP + session cookie --> Server
-    Routes --> Cache
+    Web -- HTTP + session cookie --> Backend
     Routes --> DB
+    Routes --> GCS
+    BookingProxy -- HTTP + x-internal-api-key --> BookingAPI
+    BookingAPI --> BookingDB
+    Scheduler --> BookingAPI
 ```
 
-## Data model
+The booking microservice is intentionally decoupled: it has its own
+Postgres schema, its own Dockerfile, and its own repository
+(https://github.com/itkdaniel/tkd-booking-service) so it can be dropped
+into a different project unchanged. The main app never talks to the
+booking database directly — only over HTTP through `BOOKING_SERVICE_URL`,
+authenticated with a shared `BOOKING_SERVICE_API_KEY`.
 
-```mermaid
-erDiagram
-    USERS ||--o{ FEATURE_TABLES : creates
-    FEATURE_TABLES ||--o{ FEATURE_FIELDS : defines
-    FEATURE_TABLES ||--o{ FEATURE_ENTRIES : contains
-    FEATURE_ENTRIES ||--o{ ENTITY_RELATIONS : "from / to"
+## Repositories
 
-    USERS {
-        int id PK
-        string username
-        string passwordHash
-        enum role "admin | user | guest"
-    }
-    FEATURE_TABLES {
-        int id PK
-        string name
-        string slug
-        string category
-        string createdBy
-    }
-    FEATURE_FIELDS {
-        int id PK
-        int tableId FK
-        string name
-        enum dataType "string|number|boolean|date|json"
-        boolean required
-    }
-    FEATURE_ENTRIES {
-        int id PK
-        int tableId FK
-        string label
-        json data
-    }
-    ENTITY_RELATIONS {
-        int id PK
-        int fromEntryId FK
-        int toEntryId FK
-        string relationType
-        float weight "0-1, optional"
-        string justification "optional"
-    }
-```
+This project is published across multiple GitHub repositories:
 
-`FEATURE_FIELDS` describes the schema; `FEATURE_ENTRIES.data` is a JSON blob
-validated against that schema at the UI/CLI layer (not enforced at the DB
-layer, so the model stays generic across arbitrary feature-engineering
-domains, not just sports betting).
+| Repo | Contents |
+|---|---|
+| [`itkdaniel/tkd-services-platform`](https://github.com/itkdaniel/tkd-services-platform) | This monorepo — main app (frontend + API server), a copy of the booking service, deploy tooling, CI/CD, docs |
+| [`itkdaniel/tkd-booking-service`](https://github.com/itkdaniel/tkd-booking-service) | Standalone booking microservice, published separately so it can be reused in other projects without the rest of this repo |
 
-## API
+The copy of `artifacts/booking-service` in this monorepo is the source of
+truth for the platform; changes to it are also pushed to the standalone
+repo (see "Cutting a release" below).
 
-```mermaid
-flowchart TD
-    A[GET/POST /api/tables] --> B[GET/POST /api/tables/:id/fields]
-    A --> C[GET/POST /api/tables/:id/entries]
-    C --> D[GET/DELETE /api/entries/:id]
-    D --> E[GET/POST /api/relations]
-    E --> F[GET /api/graph]
-```
+## Prerequisites
 
-Full request/response shapes live in `lib/api-spec/openapi.yaml`; the web UI
-and the generated TanStack Query hooks (`lib/api-client-react`) are both
-generated from it via Orval, so the contract, the frontend hooks, and the
-Zod validators are always in sync. The CLI talks to the same REST endpoints
-directly over HTTP.
+- Node.js 24, [pnpm](https://pnpm.io/) 10 (via `corepack enable`)
+- PostgreSQL 16 (two logical databases — one for the main app, one for
+  booking; see below)
+- Python 3.11 + [uv](https://docs.astral.sh/uv/) — only needed if you use
+  the `scripts/` tooling in this repo
+- Docker + Docker Compose — only needed for the self-hosted path
 
-## Auth model
+## Environment variables / secrets
 
-Custom-built, session-cookie based (no third-party auth provider):
+Set these as Replit Secrets when running on Replit, or in a `.env` file /
+your process manager when self-hosting. See `.env.example` at the repo root
+and `artifacts/booking-service/.env.example` for the full annotated list.
 
-- **First registered user becomes `admin`** automatically; everyone after
-  gets `user`.
-- **`guest`** is implicit for unauthenticated requests — never persisted as
-  a user row. Guests get read-only access; `user` and `admin` can create and
-  delete data.
-- Sessions are stored in Postgres via `connect-pg-simple` and signed with
-  `SESSION_SECRET`.
+| Variable | Used by | Purpose |
+|---|---|---|
+| `DATABASE_URL` | api-server | Main app Postgres connection |
+| `SESSION_SECRET` | api-server | Signs session cookies |
+| `PORT` | every service | Port each service binds to (Replit sets this automatically) |
+| `BASE_PATH` | tkd-services | Base path the frontend is served under (`/` when self-hosted) |
+| `BOOKING_SERVICE_URL` | api-server | Where to reach the booking microservice |
+| `BOOKING_SERVICE_API_KEY` | api-server, booking-service | Shared secret for service-to-service calls (`x-internal-api-key`) |
+| `BOOKING_DATABASE_URL` | booking-service | Booking microservice's own Postgres connection |
+| `ADMIN_NOTIFICATION_EMAIL` / `ADMIN_NOTIFICATION_LABEL` | booking-service | Who gets booking notifications |
+| `EMAIL_PROVIDER` (`gmail` or `smtp`) + `SMTP_*` / `EMAIL_FROM` | booking-service | Outbound email for booking confirmations/reminders |
+| `PUBLIC_OBJECT_SEARCH_PATHS`, `PRIVATE_OBJECT_DIR`, `DEFAULT_OBJECT_STORAGE_BUCKET_ID` | api-server | Object Storage bucket for résumé PDFs and portfolio images |
 
-## Running it
+Never commit real values for any of these — `.env.example` files document
+names only.
 
-This project runs on Replit; the three workflows (`API Server`, `web`,
-`Component Preview Server`) start automatically. To use the CLI or re-seed
-data manually:
+## Running it on Replit
+
+The `Booking Service` workflow starts automatically. Start the other pieces
+from the shell or their own workflow buttons:
 
 ```bash
-# Seed example data (idempotent — safe to re-run)
-pnpm --filter @workspace/api-server run seed
-
-# CLI (run from the repo root; talks to the API server on localhost:8080)
-uv run cli/main.py --help
-uv run cli/main.py auth login --username demo --password demo12345
-uv run cli/main.py graph --as-tree
+pnpm --filter @workspace/api-server run dev       # main app backend, port 8080
+pnpm --filter @workspace/tkd-services run dev      # main app frontend
+pnpm --filter @workspace/status-dashboard run dev  # internal test dashboard
+pnpm --filter @workspace/feature-graph run dev     # internal feature/graph explorer
+pnpm run typecheck                                 # typecheck everything
+pnpm run build                                     # typecheck + build everything
 ```
 
-The seed script creates a `demo` / `demo12345` admin account if no users
-exist yet.
+Publish through Replit's own deployment system (the Publish button / the
+`deployment` skill) — that's the supported path for running this in
+production. Object storage, secrets, and the booking service workflow are
+already wired up for that path.
 
-## Deployment
+## Running via Docker Compose (self-hosted)
 
-Publish through Replit's own deployment system (see the `deployment` skill /
-the Publish button) — that's the supported path for this project. The
-`deploy/` folder (Docker, Kubernetes, GitHub Actions) is **reference-only**
-documentation for running this codebase on non-Replit infrastructure; it is
-not wired into this Repl and is not exercised by anything here. See
-`deploy/README.md`.
+The root [`docker-compose.yml`](./docker-compose.yml) is **reference
+tooling for running this project outside Replit** — it is not executed
+inside this dev environment, since Replit doesn't run Docker natively here.
+On any machine with Docker installed:
+
+```bash
+cp .env.example .env.docker   # fill in real secrets (see table above)
+docker compose --env-file .env.docker up --build
+```
+
+This starts two Postgres instances (main app + booking), the API server
+(`:8080`), the built frontend (`:5000`), and the booking microservice
+(`:8000`). See `deploy/README.md` for what each file under `deploy/` does
+and the Kubernetes manifests if you're running a cluster instead.
+
+**Known gap:** résumé/portfolio file uploads use Replit's built-in Object
+Storage sidecar for credentials. Outside Replit, you need to point
+`artifacts/api-server/src/lib/objectStorage.ts` at a real Google Cloud
+Storage bucket with your own service-account credentials (or swap in a
+different storage backend) — the reference Compose config does not do this
+for you.
+
+## Testing
+
+```bash
+pnpm --filter @workspace/api-server run test:coverage
+pnpm --filter @workspace/booking-service run test:coverage
+```
+
+Both run automatically on every push/PR via
+[`.github/workflows/ci.yml`](./.github/workflows/ci.yml), alongside a
+workspace-wide typecheck + build. Coverage reports are uploaded as CI
+artifacts.
+
+## Cutting a release
+
+1. Make sure `main` is green in [Actions](https://github.com/itkdaniel/tkd-services-platform/actions).
+2. Decide the next version (`vMAJOR.MINOR.PATCH`, e.g. `v1.0.0` → `v1.1.0`).
+3. Tag and push:
+   ```bash
+   git tag v1.1.0
+   git push origin v1.1.0
+   ```
+4. Pushing a `v*` tag triggers [`.github/workflows/release.yml`](./.github/workflows/release.yml),
+   which reruns the full test suite, builds every service, packages the
+   build output, and publishes a GitHub Release with those artifacts
+   attached. You can also trigger it manually (without tagging) from the
+   Actions tab for a dry run.
+5. If `artifacts/booking-service` changed, mirror the change into the
+   standalone [`tkd-booking-service`](https://github.com/itkdaniel/tkd-booking-service)
+   repo (copy the directory contents and push) so the two stay in sync.
 
 ## Roadmap / explicitly deferred
 
-Scoped out of this build; documented here so the gap is explicit rather than
-silent:
-
-- **Web scraping / NLP pipelines** for auto-populating feature tables from
-  external text sources.
-- **Multi-LLM orchestration** (e.g. routing feature-generation prompts
-  across multiple model providers).
-- **Neo4j-backed graph storage** — the API and CLI are deliberately
-  designed so the `/graph` endpoint could be re-pointed at a real graph
-  database later; today it's computed from the relational schema in
-  Postgres.
-- **Redis-backed caching** — the API uses a simple in-process TTL cache
-  today (`artifacts/api-server/src/lib/cache.ts`); fine for a single
-  instance, not for multi-instance deployments.
-- **vis.js / three.js graph rendering** — the web UI renders the graph with
-  `react-force-graph-2d`; a 3D or vis.js-based renderer is a possible future
-  swap, not built here.
-- **Dedicated testing microservice** (POM/BDD/data-driven test suite as a
-  separate service) — out of scope for this build; verification here was
-  manual/scripted smoke testing (curl + seed script) rather than an
-  automated test suite.
-- **Live Docker/Kubernetes/CI execution** — the manifests in `deploy/` are
-  reference documentation only, not run as part of this Repl.
-- **Quantum computation** — not applicable to this domain; not built.
+- **Live Docker/Kubernetes execution** — the manifests under `deploy/` and
+  the root `docker-compose.yml` are real, working reference configs, but
+  they are not run as part of this Repl; verification here is via the CI
+  workflow's typecheck/build/test steps, not a live container run.
+- **Object storage outside Replit** — see the "Known gap" note above.
+- **Redis-backed caching** — the API uses a simple in-process cache where
+  needed today; fine for a single instance, not multi-instance deployments.
 
 ## Where things live
 
-- `artifacts/api-server` — Express API (routes, auth, caching, seed script).
-- `artifacts/feature-graph` — React + Vite web UI.
-- `artifacts/mockup-sandbox` — canvas/design preview sandbox (not part of the
-  shipped product).
-- `lib/db` — Drizzle schema, migrations.
-- `lib/api-spec` — OpenAPI source of truth.
-- `lib/api-client-react` — generated TanStack Query hooks.
-- `cli/` — Python CLI client.
-- `deploy/` — reference-only Docker/K8s/GitHub Actions docs.
+- `artifacts/tkd-services` — the public site (React + Vite): home, about,
+  portfolio, blog, contact, résumé admin.
+- `artifacts/api-server` — Express API: auth, blog, projects, résumé,
+  contact, storage, booking proxy.
+- `artifacts/booking-service` — standalone booking microservice (own
+  Postgres schema, own Dockerfile, own repo).
+- `artifacts/status-dashboard`, `artifacts/feature-graph`,
+  `artifacts/mockup-sandbox` — internal dev tooling, not part of the public
+  product.
+- `lib/db` — Drizzle schema shared by the main app.
+- `deploy/` — reference-only Docker/Kubernetes docs; `github-actions/ci.yml`
+  is a static copy of the live workflow for forks.
+- `.github/workflows/` — the CI (`ci.yml`) and release (`release.yml`)
+  workflows that actually run on GitHub.
+- `cli/`, `scripts/` — supporting tooling not part of the shipped product.

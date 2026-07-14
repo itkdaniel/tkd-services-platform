@@ -1,6 +1,11 @@
-# REFERENCE ONLY. Not active — Replit does not run GitHub Actions for this
-# project. Copy this file to .github/workflows/ci.yml in a fork/mirror repo
-# if you want CI checks there.
+# This is a copy of the workflow that is actually active at
+# .github/workflows/ci.yml, kept here for reference (e.g. for anyone
+# forking/mirroring this repo who stripped .github/ and wants a starting
+# point). Replit itself does not run GitHub Actions; this file is not
+# exercised inside the Repl.
+#
+# The live version also runs the api-server and booking-service test suites
+# with coverage — see .github/workflows/ci.yml for the full workflow.
 name: CI
 
 on:

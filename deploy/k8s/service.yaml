@@ -2,10 +2,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: feature-graph-api
+  name: tkd-services-api
 spec:
   selector:
-    app: feature-graph-api
+    app: tkd-services-api
   ports:
     - port: 80
       targetPort: 8080

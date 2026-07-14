@@ -1,0 +1,127 @@
+# ---------------------------------------------------------------------------
+# Reference Docker Compose config for self-hosting TKD Services OUTSIDE
+# Replit. This file is not run inside this dev environment — Replit doesn't
+# execute Docker natively here, and the project runs via the workflows
+# described in the root README (`Booking Service` workflow + the
+# `tkd-services` / `api-server` artifact dev servers) and is published
+# through Replit's own deployment system.
+#
+# It exists so anyone taking this codebase off Replit has a working starting
+# point: Postgres for each service, the API server, the booking
+# microservice, and the built frontend, all wired together with the same
+# environment variables the app expects in production.
+#
+# Usage (on a machine with Docker installed):
+#   cp .env.example .env.docker   # fill in real secrets
+#   docker compose --env-file .env.docker up --build
+#
+# See README.md "Running via Docker Compose (self-hosted)" for the full
+# walkthrough, including the object-storage caveat (résumé/portfolio image
+# uploads use Replit's built-in Object Storage sidecar and need a real GCS
+# bucket + credentials to work outside Replit).
+# ---------------------------------------------------------------------------
+
+services:
+  # --- Databases -----------------------------------------------------------
+  # Each service owns its own schema/instance, matching how they're deployed
+  # on Replit (two separate Postgres databases, not a shared one).
+  postgres-app:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: tkd_services
+      POSTGRES_USER: tkd_services
+      POSTGRES_PASSWORD: change-me
+    volumes:
+      - pgdata-app:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tkd_services"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres-booking:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: tkd_booking
+      POSTGRES_USER: tkd_booking
+      POSTGRES_PASSWORD: change-me
+    volumes:
+      - pgdata-booking:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tkd_booking"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # --- Main app backend ------------------------------------------------------
+  api-server:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.api-server
+    depends_on:
+      postgres-app:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://tkd_services:change-me@postgres-app:5432/tkd_services
+      SESSION_SECRET: ${SESSION_SECRET:-change-me-too}
+      NODE_ENV: production
+      PORT: 8080
+      BOOKING_SERVICE_URL: http://booking-service:8000
+      BOOKING_SERVICE_API_KEY: ${BOOKING_SERVICE_API_KEY:-change-me-booking-key}
+      # Object storage (résumé uploads, portfolio images) — requires a real
+      # GCS bucket + credentials outside Replit. See README for details.
+      DEFAULT_OBJECT_STORAGE_BUCKET_ID: ${DEFAULT_OBJECT_STORAGE_BUCKET_ID:-}
+      PRIVATE_OBJECT_DIR: ${PRIVATE_OBJECT_DIR:-}
+      PUBLIC_OBJECT_SEARCH_PATHS: ${PUBLIC_OBJECT_SEARCH_PATHS:-}
+    ports:
+      - "8080:8080"
+
+  # --- Main app frontend -----------------------------------------------------
+  tkd-services:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.web
+    depends_on:
+      - api-server
+    environment:
+      PORT: 5000
+      BASE_PATH: /
+    ports:
+      - "5000:5000"
+
+  # --- Standalone booking/appointments microservice ---------------------------
+  # Also published on its own as https://github.com/itkdaniel/tkd-booking-service
+  # so it can be lifted into another project without the rest of this repo.
+  booking-service:
+    build:
+      context: ./artifacts/booking-service
+      dockerfile: Dockerfile
+    depends_on:
+      postgres-booking:
+        condition: service_healthy
+    environment:
+      BOOKING_DATABASE_URL: postgres://tkd_booking:change-me@postgres-booking:5432/tkd_booking
+      BOOKING_SERVICE_API_KEY: ${BOOKING_SERVICE_API_KEY:-change-me-booking-key}
+      PORT: 8000
+      ADMIN_NOTIFICATION_EMAIL: ${ADMIN_NOTIFICATION_EMAIL:-admin@example.com}
+      ADMIN_NOTIFICATION_LABEL: Admin
+      EMAIL_PROVIDER: smtp
+      EMAIL_FROM: bookings@example.com
+      SMTP_HOST: ${SMTP_HOST:-smtp.example.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: "false"
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      BUSINESS_UTC_OFFSET_MINUTES: 0
+      BUSINESS_DAYS: "1,2,3,4,5"
+      BUSINESS_START_HOUR: 9
+      BUSINESS_END_HOUR: 17
+      SLOT_DURATION_MINUTES: 30
+      MAX_BOOKING_HORIZON_DAYS: 60
+      REMINDER_CHECK_CRON: "*/15 * * * *"
+    ports:
+      - "8000:8000"
+
+volumes:
+  pgdata-app:
+  pgdata-booking:

@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  typecheck-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
+      - run: pnpm run build
+
+  test-api-server:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tkd_services_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tkd_services_test
+      SESSION_SECRET: ci-test-session-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Push DB schema
+        run: pnpm --filter @workspace/db run push
+      - name: Create sessions table
+        # connect-pg-simple's createTableIfMissing is disabled in app code
+        # (see replit.md "Gotchas"), so CI provisions it the same way this
+        # Repl's database does — not part of the Drizzle schema.
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d tkd_services_test -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE TABLE IF NOT EXISTS sessions (
+            sid varchar NOT NULL COLLATE "default",
+            sess json NOT NULL,
+            expire timestamp(6) NOT NULL
+          ) WITH (OIDS=FALSE);
+          ALTER TABLE sessions DROP CONSTRAINT IF EXISTS session_pkey;
+          ALTER TABLE sessions ADD CONSTRAINT session_pkey PRIMARY KEY (sid);
+          CREATE INDEX IF NOT EXISTS idx_session_expire ON sessions (expire);
+          SQL
+      - name: Run tests with coverage
+        run: pnpm --filter @workspace/api-server run test:coverage
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-server-coverage
+          path: artifacts/api-server/coverage
+          if-no-files-found: ignore
+
+  test-booking-service:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tkd_booking_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      BOOKING_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tkd_booking_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Push DB schema
+        run: pnpm --filter @workspace/booking-service run db:push
+      - name: Run tests with coverage
+        run: pnpm --filter @workspace/booking-service run test:coverage
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: booking-service-coverage
+          path: artifacts/booking-service/coverage
+          if-no-files-found: ignore

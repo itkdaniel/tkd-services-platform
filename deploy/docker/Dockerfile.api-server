@@ -3,7 +3,7 @@
 # the API server can be containerized on non-Replit infrastructure.
 #
 # Build from the monorepo root:
-#   docker build -f deploy/docker/Dockerfile.api-server -t feature-graph-api .
+#   docker build -f deploy/docker/Dockerfile.api-server -t tkd-services-api .
 
 FROM node:24-slim AS build
 WORKDIR /app

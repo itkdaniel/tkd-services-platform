@@ -3,22 +3,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: feature-graph-api
+  name: tkd-services-api
   labels:
-    app: feature-graph-api
+    app: tkd-services-api
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: feature-graph-api
+      app: tkd-services-api
   template:
     metadata:
       labels:
-        app: feature-graph-api
+        app: tkd-services-api
     spec:
       containers:
         - name: api-server
-          image: feature-graph-api:latest
+          image: tkd-services-api:latest
           ports:
             - containerPort: 8080
           env:
@@ -29,12 +29,12 @@ spec:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: feature-graph-secrets
+                  name: tkd-services-secrets
                   key: database-url
             - name: SESSION_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: feature-graph-secrets
+                  name: tkd-services-secrets
                   key: session-secret
           readinessProbe:
             httpGet:

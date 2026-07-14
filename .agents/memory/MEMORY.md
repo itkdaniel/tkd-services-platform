@@ -13,3 +13,7 @@
 - [AdmZip path-traversal testing](admzip-path-traversal-testing.md) — `addFile()` normalizes `../` out of entry names; mutate `entryName` post-construction to test traversal guards.
 - [Singleton flag test isolation](singleton-flag-test-isolation.md) — table-wide "only one row is current" flags are order-dependent across tests sharing a DB table; assert by id, not by "the current one".
 - [Cross-artifact fetch path](cross-artifact-fetch-path.md) — never prefix a fetch to another artifact's shared API with your own `import.meta.env.BASE_URL`; use a root-relative path instead.
+- [GitHub connector missing workflow scope](github-workflow-scope-limitation.md) — pushes touching `.github/workflows/*.yml` are rejected via every write path if the token lacks `workflow` scope; check scopes before assuming a tool bug.
+- [GitHub trees API proxy flaky](github-trees-api-proxy-flaky.md) — manual Git Data API tree creation via connectors.proxy 404s unreliably for bulk file publishing; use a Contents API PUT loop instead.
+- [git checkout subtree branch danger](git-checkout-subtree-branch-danger.md) — checking out a subtree-split branch in the main workspace deletes unrelated files and can deregister artifacts; use a worktree instead.
+- [pnpm catalog standalone extraction](pnpm-catalog-standalone-extraction.md) — resolve `catalog:` specifiers to concrete versions before publishing an extracted package as its own standalone repo.

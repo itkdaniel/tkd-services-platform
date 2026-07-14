@@ -8,6 +8,11 @@ It is intentionally self-contained — its own `package.json`, own Postgres sche
 Dockerfile — so it can be copied into another project and pointed at that project's own database
 and secrets with no code changes.
 
+This directory is also published as its own repository,
+[`itkdaniel/tkd-booking-service`](https://github.com/itkdaniel/tkd-booking-service), so it can be
+used outside the `tkd-services-platform` monorepo. When this directory changes, mirror the change
+into that repo too (see the root README's "Cutting a release" section).
+
 ## Running standalone
 
 ```bash

@@ -1,58 +1,49 @@
-# Feature Graph
+# TKD Services
 
-A feature-engineering knowledge-graph platform: typed data tables, entries,
-and weighted/justified relations between them, explorable via a web UI, a
-Python CLI, and a REST API. Seeded with an NBA player-props example dataset.
+A personal portfolio / independent-consulting website: hero + about pages,
+a project portfolio, a blog, a contact form, a résumé manager (upload,
+version, publish), and call-booking backed by a standalone microservice.
 
-See `README.md` at the repo root for the full architecture, data model, and
-roadmap (including what was explicitly deferred/documented-as-reference vs.
-actually built).
+See `README.md` at the repo root for the full architecture, environment
+variables, self-hosting (Docker Compose) instructions, and release process.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080, path `/api`)
-- `pnpm --filter @workspace/feature-graph run dev` — run the web UI
-- `pnpm --filter @workspace/api-server run seed` — seed demo data (idempotent; creates `demo`/`demo12345` admin on first run)
-- `uv run cli/main.py --help` — Python CLI (talks to the API server over HTTP)
+- `pnpm --filter @workspace/tkd-services run dev` — public site (frontend)
+- `pnpm --filter @workspace/api-server run dev` — main app backend (port 8080)
+- `pnpm --filter @workspace/booking-service run dev` — booking microservice (port 8000; runs via the `Booking Service` workflow)
+- `pnpm --filter @workspace/status-dashboard run dev` — internal test status dashboard (not part of the public site)
+- `pnpm --filter @workspace/feature-graph run dev` — internal feature/graph explorer (not part of the public site)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL`, `SESSION_SECRET`
+- `pnpm --filter @workspace/api-server run test:coverage` / `pnpm --filter @workspace/booking-service run test:coverage` — test suites (also run in CI)
+- Required env: `DATABASE_URL`, `SESSION_SECRET`, `BOOKING_SERVICE_URL`, `BOOKING_SERVICE_API_KEY`, `BOOKING_DATABASE_URL`, object-storage vars (see `.env.example`)
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
 - API: Express 5, `express-session` + `connect-pg-simple` for sessions, `bcryptjs` for password hashing
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec) → `lib/api-client-react` TanStack Query hooks
-- Web: React + Vite, `react-force-graph-2d` for graph rendering, `react-hook-form` + Zod for forms
-- Build: esbuild (CJS bundle) for the API server
-- CLI: Python 3.11, `click` + `rich` + `requests`, managed with `uv`
+- DB: PostgreSQL + Drizzle ORM (main app and booking microservice each have their own database)
+- Web: React + Vite, Tailwind, Radix UI primitives
+- Booking microservice: Express, `node-cron` for reminders, `nodemailer`/Gmail connector for email
+- Build: esbuild (API server, booking service), Vite (frontends)
 
 ## Where things live
 
-- `artifacts/api-server` — Express API. Routes in `src/routes/*`; auth middleware in `src/middlewares/auth.ts`; in-process cache in `src/lib/cache.ts`; seed script in `src/scripts/seed.ts`.
-- `artifacts/feature-graph` — web UI (graph explorer at `/`, table directory at `/tables`, table workspace at `/tables/:id`, `/login`, `/register`).
-- `lib/db/src/schema` — Drizzle schema: `users`, `featureTables`, `featureFields`, `featureEntries`, `entityRelations`.
-- `lib/api-spec/openapi.yaml` — source-of-truth API contract.
-- `cli/` — Python CLI (`main.py` entrypoint, `commands/` per resource, `api_client.py`, `logging_utils.py`).
-- `deploy/` — reference-only Docker/K8s/GitHub Actions docs (not active on Replit).
+- `artifacts/tkd-services` — public site.
+- `artifacts/api-server` — Express API (auth, blog, projects, résumé, contact, storage, booking proxy).
+- `artifacts/booking-service` — standalone booking microservice; also published as its own repo (`itkdaniel/tkd-booking-service`).
+- `artifacts/status-dashboard`, `artifacts/feature-graph`, `artifacts/mockup-sandbox` — internal dev tooling, not part of the shipped product.
+- `lib/db` — Drizzle schema for the main app.
+- `deploy/`, root `docker-compose.yml`, `.github/workflows/` — self-hosting reference tooling + CI/CD (see README's "Running via Docker Compose" and "Cutting a release" sections).
 
-## Architecture decisions
+## Multi-repo publishing
 
-- Auth is custom-built (session cookies, bcrypt), not a third-party provider. First registered user becomes `admin`; everyone after is `user`; `guest` is implicit for unauthenticated requests and never persisted.
-- The graph (`/api/graph`) is computed from the relational schema in Postgres, not a dedicated graph database — kept swappable for a future Neo4j backend without changing the API contract.
-- Caching is a hand-rolled in-process TTL Map, not Redis — fine for a single instance; documented as a scaling gap in the README roadmap.
-- Table slugs auto-dedupe with an incrementing suffix on name collision rather than rejecting the create.
-- Entry deletes explicitly cascade-delete relations in application code rather than relying solely on DB-level cascade config.
-
-## Product
-
-- **Graph explorer** (`/`): force-directed graph of entries, search-to-highlight, click-to-inspect detail panel, create relations (with weight + justification) directly from the panel.
-- **Feature databases** (`/tables`, `/tables/:id`): create tables with a name/category/description, define a typed field schema (string/number/boolean/date/json, required flag), and add entries via a form generated from that schema (falls back to raw JSON editing).
-- **Auth**: register/login/logout; guests can browse read-only, `user`/`admin` can create and delete data.
+This monorepo is published at `itkdaniel/tkd-services-platform`. The booking
+microservice is additionally mirrored as a standalone repo,
+`itkdaniel/tkd-booking-service`, so it can be reused outside this project.
+When `artifacts/booking-service` changes, mirror the change into that repo
+too (see README's "Cutting a release" section).
 
 ## User preferences
 
@@ -60,9 +51,10 @@ _None recorded yet._
 
 ## Gotchas
 
-- `connect-pg-simple`'s `createTableIfMissing: true` fails under the esbuild-bundled server (it tries to read a `table.sql` file that isn't bundled). Keep it `false`; the `sessions` table already exists in the DB (created manually, not part of the Drizzle schema).
-- Drizzle returns `Date` objects for timestamp columns but generated Zod response schemas expect ISO strings — every route wraps its response in the `toPlain()` helper (`src/lib/serialize.ts`) before `*Response.parse(...)`.
-- Canvas 2D contexts (used in the graph renderer) cannot resolve CSS variables or `var(--...)` in `ctx.font`/`ctx.fillStyle` — always pass literal font/color values there, not theme tokens.
+- `connect-pg-simple`'s `createTableIfMissing: true` fails under the esbuild-bundled server (it tries to read a `table.sql` file that isn't bundled). Keep it `false`.
+- Drizzle returns `Date` objects for timestamp columns but generated Zod response schemas expect ISO strings — serialize before validating.
+- Canvas 2D contexts cannot resolve CSS variables in `ctx.font`/`ctx.fillStyle` — always pass literal values.
+- Object storage (résumé PDFs, portfolio images) relies on Replit's built-in Object Storage sidecar; self-hosting that feature requires pointing at a real GCS bucket with your own credentials.
 
 ## Pointers
 

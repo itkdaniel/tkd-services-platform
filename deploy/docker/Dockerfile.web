@@ -1,0 +1,32 @@
+# REFERENCE ONLY — not built or run on Replit. Replit deploys this project
+# through its own managed deployment system; this Dockerfile is provided so
+# the tkd-services frontend can be containerized on non-Replit
+# infrastructure.
+#
+# Build from the monorepo root:
+#   docker build -f deploy/docker/Dockerfile.web -t tkd-services-web .
+
+FROM node:24-slim AS build
+WORKDIR /app
+RUN corepack enable
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY lib ./lib
+COPY artifacts/tkd-services ./artifacts/tkd-services
+RUN pnpm install --frozen-lockfile
+ENV NODE_ENV=production
+ENV PORT=5173
+ENV BASE_PATH=/
+RUN pnpm --filter @workspace/tkd-services run build
+
+FROM node:24-slim AS runtime
+WORKDIR /app
+RUN corepack enable
+ENV NODE_ENV=production
+COPY --from=build /app/artifacts/tkd-services/package.json ./package.json
+COPY --from=build /app/artifacts/tkd-services/vite.config.ts ./vite.config.ts
+COPY --from=build /app/artifacts/tkd-services/dist ./dist
+COPY --from=build /app/node_modules ./node_modules
+EXPOSE 5000
+ENV PORT=5000
+ENV BASE_PATH=/
+CMD ["pnpm", "exec", "vite", "preview", "--config", "vite.config.ts", "--host", "0.0.0.0", "--port", "5000"]
