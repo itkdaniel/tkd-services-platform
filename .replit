@@ -49,3 +49,6 @@ channel = "stable-25_05"
 BOOKING_SERVICE_URL = "http://localhost:8000"
 ADMIN_NOTIFICATION_EMAIL = "featureforge.io@gmail.com"
 EMAIL_PROVIDER = "gmail"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-bd3f1dad-b154-4e49-a99d-d5d375f0c872"
