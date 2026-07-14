@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/status-dashboard/"
+title = "Test Status Dashboard"
+version = "1.0.0"
+id = "artifacts/status-dashboard"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/status-dashboard/" ]
+localPort = 20258
+
+[services.development]
+run = "pnpm --filter @workspace/status-dashboard run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/status-dashboard", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/status-dashboard/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20258"
+BASE_PATH = "/status-dashboard/"

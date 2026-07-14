@@ -13,6 +13,7 @@ import storageRouter from "./storage";
 import resumeRouter from "./resume";
 import projectsRouter from "./projects";
 import bookingRouter from "./booking";
+import devTestStatusRouter from "./devTestStatus";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(storageRouter);
 router.use(resumeRouter);
 router.use(projectsRouter);
 router.use(bookingRouter);
+router.use(devTestStatusRouter);
 
 export default router;
