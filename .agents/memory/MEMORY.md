@@ -17,3 +17,4 @@
 - [GitHub trees API proxy flaky](github-trees-api-proxy-flaky.md) — manual Git Data API tree creation via connectors.proxy 404s unreliably for bulk file publishing; use a Contents API PUT loop instead.
 - [git checkout subtree branch danger](git-checkout-subtree-branch-danger.md) — checking out a subtree-split branch in the main workspace deletes unrelated files and can deregister artifacts; use a worktree instead.
 - [pnpm catalog standalone extraction](pnpm-catalog-standalone-extraction.md) — resolve `catalog:` specifiers to concrete versions before publishing an extracted package as its own standalone repo.
+- [Freeze "now" for relative-offset test fixtures](frozen-time-test-fixtures.md) — "N hours from now" fixtures flip pass/fail by time of day unless the clock is frozen in tests.

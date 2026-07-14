@@ -23,3 +23,12 @@ push` for that change — create the new table(s) directly via a raw
 snake_case names, types, defaults) through the database execute-SQL tool
 instead. Reserve `drizzle-kit push` for schema changes that don't coexist with
 untracked tables.
+
+The same TTY-prompt error can also fire from drizzle-kit's *enum* resolver
+(not just tables) when the shared dev Postgres instance already has
+unrelated `pg_type` enum values from other artifacts/products in the same
+workspace — it's an ambiguity-resolution prompt, not a CI-specific bug. It
+did not reproduce against a genuinely fresh, isolated database (verified by
+pushing into a brand-new empty database on the same instance), so a service's
+own CI job with its own throwaway Postgres container is unaffected — only the
+shared workspace dev DB needs the raw-SQL workaround.

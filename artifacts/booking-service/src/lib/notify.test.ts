@@ -12,8 +12,15 @@ import { config } from "./config";
 
 const mockedSendEmail = vi.mocked(sendEmail);
 
+// Each call must land on a distinct `startTime` (the column is unique), so
+// bump by a growing offset per call rather than relying on real clock drift
+// between calls within the same test run — under frozen test time (see
+// ../test/setup.ts) `Date.now()` no longer advances between calls, so a
+// fixed offset would make every appointment collide on the same instant.
+let appointmentOffsetHours = 48;
 async function insertAppointment(): Promise<Appointment> {
-  const start = new Date(Date.now() + 48 * 60 * 60 * 1000);
+  const start = new Date(Date.now() + appointmentOffsetHours * 60 * 60 * 1000);
+  appointmentOffsetHours += 1;
   const [appt] = await db
     .insert(appointmentsTable)
     .values({
