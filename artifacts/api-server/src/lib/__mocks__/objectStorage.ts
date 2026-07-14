@@ -11,6 +11,7 @@ export class ObjectStorageService {
   trySetObjectEntityAclPolicy = vi.fn(async (rawPath: string) => rawPath);
   writeObjectEntity = vi.fn(async (entityId: string) => `/objects/${entityId}`);
   deleteObjectsUnderPrefix = vi.fn(async () => {});
+  listObjectEntitiesUnderPrefix = vi.fn(async () => [] as Array<{ objectPath: string; file: unknown; timeCreated: Date }>);
   getObjectEntityFile = vi.fn(async (objectPath: string) => {
     const file = __mockFiles.get(objectPath);
     if (!file) {
@@ -21,3 +22,5 @@ export class ObjectStorageService {
     return file;
   });
 }
+
+export const UPLOAD_INTENT_TTL_MS = 60 * 60 * 1000;

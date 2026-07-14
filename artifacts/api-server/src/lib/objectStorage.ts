@@ -30,6 +30,12 @@ export const objectStorageClient = new Storage({
   projectId: '',
 });
 
+// How long a browser is given between requesting an upload URL and confirming
+// it (e.g. POST /resume/versions). Shared between the confirm-step validation
+// in routes/resume.ts and the orphan-sweep cleanup job so they agree on what
+// counts as "abandoned".
+export const UPLOAD_INTENT_TTL_MS = 60 * 60 * 1000;
+
 export class ObjectNotFoundError extends Error {
   constructor() {
     super('Object not found');
@@ -236,6 +242,32 @@ export class ObjectStorageService {
         }),
       ),
     );
+  }
+
+  /**
+   * Lists every object entity stored under a given prefix (e.g. "uploads/"),
+   * returning each object's public-facing objectPath alongside its GCS File
+   * handle and creation time. Used by the orphaned-upload sweep to find
+   * objects that were PUT directly to storage but never confirmed via the
+   * corresponding "create version" endpoint.
+   */
+  async listObjectEntitiesUnderPrefix(
+    prefix: string,
+  ): Promise<Array<{ objectPath: string; file: File; timeCreated: Date }>> {
+    let entityDir = this.getPrivateObjectDir();
+    if (!entityDir.endsWith('/')) {
+      entityDir = `${entityDir}/`;
+    }
+    const { bucketName, objectName: entityDirObjectName } = parseObjectPath(entityDir);
+    const fullPrefix = `${entityDirObjectName}${prefix}`;
+    const bucket = objectStorageClient.bucket(bucketName);
+    const [files] = await bucket.getFiles({ prefix: fullPrefix });
+
+    return files.map((file) => {
+      const entityId = file.name.slice(entityDirObjectName.length);
+      const timeCreated = file.metadata.timeCreated ? new Date(file.metadata.timeCreated) : new Date(0);
+      return { objectPath: `/objects/${entityId}`, file, timeCreated };
+    });
   }
 
   async canAccessObjectEntity({

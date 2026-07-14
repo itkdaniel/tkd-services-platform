@@ -14,7 +14,7 @@ import {
 } from "@workspace/api-zod";
 import { requireRole } from "../middlewares/auth";
 import { toPlain } from "../lib/serialize";
-import { ObjectStorageService } from "../lib/objectStorage";
+import { ObjectStorageService, UPLOAD_INTENT_TTL_MS } from "../lib/objectStorage";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -61,7 +61,6 @@ router.post("/resume/versions", requireRole("user", "admin"), async (req, res): 
   // arbitrary (e.g. someone else's) existing objectPath, forcibly re-ACL it,
   // and later delete their own version row — deleting the shared object out
   // from under its real owner.
-  const INTENT_TTL_MS = 60 * 60 * 1000; // 1 hour
   const [intent] = await db
     .select()
     .from(objectUploadIntentsTable)
@@ -70,7 +69,7 @@ router.post("/resume/versions", requireRole("user", "admin"), async (req, res): 
   if (
     !intent ||
     intent.uploaderId !== currentUser.id ||
-    Date.now() - new Date(intent.createdAt).getTime() > INTENT_TTL_MS
+    Date.now() - new Date(intent.createdAt).getTime() > UPLOAD_INTENT_TTL_MS
   ) {
     res.status(403).json({ error: "This upload was not requested by you or has expired" });
     return;
