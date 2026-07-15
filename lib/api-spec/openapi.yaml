@@ -908,6 +908,48 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /projects/reorder:
+    patch:
+      operationId: reorderProjects
+      tags: [projects]
+      summary: Persist a new display order for the portfolio grid (admin only)
+      description: |
+        Accepts the full list of project ids in the desired display order.
+        Every existing project id must be included exactly once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectReorderInput"
+      responses:
+        "200":
+          description: New order applied
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+        "400":
+          description: Invalid input — ids must exactly match the existing project ids
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /projects/{projectId}:
     get:
       operationId: getProject
@@ -1798,6 +1840,7 @@ components:
           demoUrl,
           subappObjectPrefix,
           subappEntrypoint,
+          sortOrder,
           ownerId,
           ownerUsername,
           createdAt,
@@ -1825,6 +1868,8 @@ components:
           type: ["string", "null"]
         subappEntrypoint:
           type: ["string", "null"]
+        sortOrder:
+          type: integer
         ownerId:
           type: integer
         ownerUsername:
@@ -1866,6 +1911,16 @@ components:
           type: ["string", "null"]
         demoUrl:
           type: ["string", "null"]
+
+    ProjectReorderInput:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          items:
+            type: integer
+          minItems: 1
 
     ProjectSubappUploadInput:
       type: object

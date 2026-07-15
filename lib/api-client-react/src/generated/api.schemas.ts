@@ -327,6 +327,7 @@ export interface Project {
   subappObjectPrefix: string | null;
   /** @nullable */
   subappEntrypoint: string | null;
+  sortOrder: number;
   ownerId: number;
   ownerUsername: string;
   createdAt: string;
@@ -354,6 +355,11 @@ export interface ProjectUpdateInput {
   githubUrl?: string | null;
   /** @nullable */
   demoUrl?: string | null;
+}
+
+export interface ProjectReorderInput {
+  /** @minItems 1 */
+  ids: number[];
 }
 
 export interface ProjectSubappUploadInput {

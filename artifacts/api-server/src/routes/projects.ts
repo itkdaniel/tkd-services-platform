@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { Router, type IRouter } from "express";
 import AdmZip from "adm-zip";
-import { desc, eq } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
 import { db, projectsTable, objectUploadIntentsTable } from "@workspace/db";
 import {
   ListProjectsResponse,
@@ -14,6 +14,8 @@ import {
   UpdateProjectBody,
   UpdateProjectResponse,
   DeleteProjectParams,
+  ReorderProjectsBody,
+  ReorderProjectsResponse,
   RegisterProjectSubappParams,
   RegisterProjectSubappBody,
   RegisterProjectSubappResponse,
@@ -102,7 +104,10 @@ async function claimUploadIntent(objectPath: string, userId: number): Promise<{ 
 }
 
 router.get("/projects", async (_req, res): Promise<void> => {
-  const projects = await db.select().from(projectsTable).orderBy(desc(projectsTable.createdAt));
+  const projects = await db
+    .select()
+    .from(projectsTable)
+    .orderBy(asc(projectsTable.sortOrder), desc(projectsTable.createdAt));
   res.json(ListProjectsResponse.parse(toPlain(projects)));
 });
 
@@ -135,6 +140,12 @@ router.post("/projects", requireRole("admin"), async (req, res): Promise<void> =
 
   const slug = await uniqueSlug(name);
 
+  // New projects land at the end of the admin-defined order rather than
+  // jumping to the front (sortOrder ascending = display order).
+  const [{ maxSortOrder }] = await db
+    .select({ maxSortOrder: sql<number>`coalesce(max(${projectsTable.sortOrder}), -1)` })
+    .from(projectsTable);
+
   const [project] = await db
     .insert(projectsTable)
     .values({
@@ -145,6 +156,7 @@ router.post("/projects", requireRole("admin"), async (req, res): Promise<void> =
       githubUrl: githubUrl ?? null,
       demoUrl: demoUrl ?? null,
       demoType: demoUrl ? "external" : "none",
+      sortOrder: Number(maxSortOrder) + 1,
       ownerId: currentUser.id,
       ownerUsername: currentUser.username,
     })
@@ -157,6 +169,40 @@ router.post("/projects", requireRole("admin"), async (req, res): Promise<void> =
   }
 
   res.status(201).json(CreateProjectResponse.parse(toPlain(project)));
+});
+
+// Registered before "/projects/:projectId" so that literal path segment
+// takes precedence over the numeric id param during route matching.
+router.patch("/projects/reorder", requireRole("admin"), async (req, res): Promise<void> => {
+  const parsed = ReorderProjectsBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const { ids } = parsed.data;
+  const uniqueIds = new Set(ids);
+  if (uniqueIds.size !== ids.length) {
+    res.status(400).json({ error: "Duplicate project id in reorder list" });
+    return;
+  }
+
+  const existing = await db.select({ id: projectsTable.id }).from(projectsTable);
+  const existingIds = new Set(existing.map((p) => p.id));
+  if (existingIds.size !== uniqueIds.size || [...uniqueIds].some((id) => !existingIds.has(id))) {
+    res.status(400).json({ error: "ids must exactly match the current set of project ids" });
+    return;
+  }
+
+  await Promise.all(
+    ids.map((id, index) => db.update(projectsTable).set({ sortOrder: index }).where(eq(projectsTable.id, id))),
+  );
+
+  const projects = await db
+    .select()
+    .from(projectsTable)
+    .orderBy(asc(projectsTable.sortOrder), desc(projectsTable.createdAt));
+  res.json(ReorderProjectsResponse.parse(toPlain(projects)));
 });
 
 router.get("/projects/:projectId", async (req, res): Promise<void> => {

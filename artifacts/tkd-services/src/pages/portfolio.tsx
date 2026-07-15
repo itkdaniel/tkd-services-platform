@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetCurrentSession,
   useListProjects,
   useDeleteProject,
+  useReorderProjects,
   getListProjectsQueryKey,
   type Project,
 } from "@workspace/api-client-react";
@@ -39,6 +40,52 @@ export default function Portfolio() {
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
 
   const deleteProject = useDeleteProject();
+  const reorderProjects = useReorderProjects();
+
+  // Local, optimistic ordering the admin can drag around. Kept in sync with
+  // the server list whenever it changes and we're not mid-drag, so guests
+  // (who never touch this state) always just render `projects` in order.
+  const [orderedProjects, setOrderedProjects] = useState<Project[] | null>(null);
+  const [draggedId, setDraggedId] = useState<number | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (draggedId !== null) return; // don't clobber an in-progress drag
+    setOrderedProjects(projects ?? null);
+  }, [projects, draggedId]);
+
+  const displayProjects = orderedProjects ?? projects ?? [];
+
+  const handleDragEnter = (targetId: number) => {
+    if (draggedId === null || draggedId === targetId) return;
+    setDropTargetId(targetId);
+    setOrderedProjects((current) => {
+      if (!current) return current;
+      const fromIndex = current.findIndex((p) => p.id === draggedId);
+      const toIndex = current.findIndex((p) => p.id === targetId);
+      if (fromIndex === -1 || toIndex === -1) return current;
+      const next = [...current];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved!);
+      return next;
+    });
+  };
+
+  const handleDragEnd = async () => {
+    // Both the drop target's onDrop and the dragged card's onDragEnd call
+    // this; only act on the first of the two.
+    if (draggedId === null) return;
+    setDraggedId(null);
+    setDropTargetId(null);
+    if (!orderedProjects) return;
+    try {
+      await reorderProjects.mutateAsync({ data: { ids: orderedProjects.map((p) => p.id) } });
+      invalidate();
+    } catch (err) {
+      toast({ title: "Reorder failed", description: (err as any)?.message, variant: "destructive" });
+      invalidate();
+    }
+  };
 
   const openCreate = () => {
     setEditingProject(null);
@@ -92,7 +139,7 @@ export default function Portfolio() {
                 <Skeleton key={i} className="h-80 w-full rounded-2xl" />
               ))}
             </div>
-          ) : !projects || projects.length === 0 ? (
+          ) : !displayProjects || displayProjects.length === 0 ? (
             <div className="text-center py-24 bg-card rounded-2xl border border-border border-dashed">
               <Briefcase className="w-10 h-10 mx-auto mb-4 text-muted-foreground/50" />
               <p className="text-lg text-muted-foreground">No projects have been added yet.</p>
@@ -103,17 +150,31 @@ export default function Portfolio() {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {projects.map((project) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  isAdmin={isAdmin}
-                  onEdit={() => openEdit(project)}
-                  onDelete={() => setDeletingProject(project)}
-                />
-              ))}
-            </div>
+            <>
+              {isAdmin && (
+                <p className="text-sm text-muted-foreground mb-4">
+                  Drag a card by its handle to change the order visitors see.
+                </p>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {displayProjects.map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    isAdmin={isAdmin}
+                    onEdit={() => openEdit(project)}
+                    onDelete={() => setDeletingProject(project)}
+                    reorderable={isAdmin}
+                    isDragging={draggedId === project.id}
+                    isDropTarget={dropTargetId === project.id}
+                    onDragStart={() => setDraggedId(project.id)}
+                    onDragEnter={() => handleDragEnter(project.id)}
+                    onDrop={handleDragEnd}
+                    onDragEnd={handleDragEnd}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </div>
       </section>

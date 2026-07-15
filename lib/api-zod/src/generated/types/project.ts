@@ -23,6 +23,7 @@ export interface Project {
   subappObjectPrefix: string | null;
   /** @nullable */
   subappEntrypoint: string | null;
+  sortOrder: number;
   ownerId: number;
   ownerUsername: string;
   createdAt: string;

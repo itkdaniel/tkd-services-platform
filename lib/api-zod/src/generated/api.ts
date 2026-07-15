@@ -634,6 +634,7 @@ export const ListProjectsResponseItem = zod.object({
   "demoUrl": zod.string().nullable(),
   "subappObjectPrefix": zod.string().nullable(),
   "subappEntrypoint": zod.string().nullable(),
+  "sortOrder": zod.number(),
   "ownerId": zod.number(),
   "ownerUsername": zod.string(),
   "createdAt": zod.string(),
@@ -668,11 +669,44 @@ export const CreateProjectResponse = zod.object({
   "demoUrl": zod.string().nullable(),
   "subappObjectPrefix": zod.string().nullable(),
   "subappEntrypoint": zod.string().nullable(),
+  "sortOrder": zod.number(),
   "ownerId": zod.number(),
   "ownerUsername": zod.string(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
+
+
+/**
+ * Accepts the full list of project ids in the desired display order.
+ * Every existing project id must be included exactly once.
+ * @summary Persist a new display order for the portfolio grid (admin only)
+ */
+
+
+
+export const ReorderProjectsBody = zod.object({
+  "ids": zod.array(zod.number()).min(1)
+})
+
+export const ReorderProjectsResponseItem = zod.object({
+  "id": zod.number(),
+  "slug": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "thumbnailObjectPath": zod.string().nullable(),
+  "githubUrl": zod.string().nullable(),
+  "demoType": zod.enum(['none', 'external', 'subapp']),
+  "demoUrl": zod.string().nullable(),
+  "subappObjectPrefix": zod.string().nullable(),
+  "subappEntrypoint": zod.string().nullable(),
+  "sortOrder": zod.number(),
+  "ownerId": zod.number(),
+  "ownerUsername": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const ReorderProjectsResponse = zod.array(ReorderProjectsResponseItem)
 
 
 /**
@@ -694,6 +728,7 @@ export const GetProjectResponse = zod.object({
   "demoUrl": zod.string().nullable(),
   "subappObjectPrefix": zod.string().nullable(),
   "subappEntrypoint": zod.string().nullable(),
+  "sortOrder": zod.number(),
   "ownerId": zod.number(),
   "ownerUsername": zod.string(),
   "createdAt": zod.string(),
@@ -731,6 +766,7 @@ export const UpdateProjectResponse = zod.object({
   "demoUrl": zod.string().nullable(),
   "subappObjectPrefix": zod.string().nullable(),
   "subappEntrypoint": zod.string().nullable(),
+  "sortOrder": zod.number(),
   "ownerId": zod.number(),
   "ownerUsername": zod.string(),
   "createdAt": zod.string(),
@@ -786,6 +822,7 @@ export const RegisterProjectSubappResponse = zod.object({
   "demoUrl": zod.string().nullable(),
   "subappObjectPrefix": zod.string().nullable(),
   "subappEntrypoint": zod.string().nullable(),
+  "sortOrder": zod.number(),
   "ownerId": zod.number(),
   "ownerUsername": zod.string(),
   "createdAt": zod.string(),
@@ -811,6 +848,7 @@ export const RemoveProjectSubappResponse = zod.object({
   "demoUrl": zod.string().nullable(),
   "subappObjectPrefix": zod.string().nullable(),
   "subappEntrypoint": zod.string().nullable(),
+  "sortOrder": zod.number(),
   "ownerId": zod.number(),
   "ownerUsername": zod.string(),
   "createdAt": zod.string(),

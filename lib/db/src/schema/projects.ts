@@ -23,6 +23,10 @@ export const projectsTable = pgTable("projects", {
   // can never read or overwrite another project's files.
   subappObjectPrefix: text("subapp_object_prefix"),
   subappEntrypoint: text("subapp_entrypoint").default("index.html"),
+  // Lower values sort first. Defaults to 0 for newly-created rows; the API
+  // assigns new projects a value one higher than the current max so they
+  // land at the end of the admin-defined order rather than jumping to the front.
+  sortOrder: integer("sort_order").notNull().default(0),
   ownerId: integer("owner_id")
     .notNull()
     .references(() => usersTable.id),

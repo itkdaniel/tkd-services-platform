@@ -50,6 +50,7 @@ import type {
   LoginInput,
   Project,
   ProjectCreateInput,
+  ProjectReorderInput,
   ProjectSubappUploadInput,
   ProjectUpdateInput,
   RegisterInput,
@@ -2479,6 +2480,79 @@ export const useCreateProject = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getCreateProjectMutationOptions(options));
+    }
+
+export const getReorderProjectsUrl = () => {
+
+
+
+
+  return `/api/projects/reorder`
+}
+
+/**
+ * Accepts the full list of project ids in the desired display order.
+ * Every existing project id must be included exactly once.
+ * @summary Persist a new display order for the portfolio grid (admin only)
+ */
+export const reorderProjects = async (projectReorderInput: ProjectReorderInput, options?: RequestInit): Promise<Project[]> => {
+
+  return customFetch<Project[]>(getReorderProjectsUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(projectReorderInput)
+  }
+);}
+
+
+
+
+
+export const getReorderProjectsMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderProjects>>, TError,{data: BodyType<ProjectReorderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reorderProjects>>, TError,{data: BodyType<ProjectReorderInput>}, TContext> => {
+
+const mutationKey = ['reorderProjects'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reorderProjects>>, {data: BodyType<ProjectReorderInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  reorderProjects(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReorderProjectsMutationResult = NonNullable<Awaited<ReturnType<typeof reorderProjects>>>
+    export type ReorderProjectsMutationBody = BodyType<ProjectReorderInput>
+    export type ReorderProjectsMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Persist a new display order for the portfolio grid (admin only)
+ */
+export const useReorderProjects = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderProjects>>, TError,{data: BodyType<ProjectReorderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reorderProjects>>,
+        TError,
+        {data: BodyType<ProjectReorderInput>},
+        TContext
+      > => {
+      return useMutation(getReorderProjectsMutationOptions(options));
     }
 
 export const getGetProjectUrl = (projectId: number,) => {

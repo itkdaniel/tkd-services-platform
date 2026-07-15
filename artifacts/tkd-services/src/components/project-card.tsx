@@ -2,24 +2,78 @@ import { Link } from "wouter";
 import type { Project } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Github, PlayCircle, Pencil, Trash2, Boxes } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Github, PlayCircle, Pencil, Trash2, Boxes, GripVertical } from "lucide-react";
 
 export function ProjectCard({
   project,
   isAdmin,
   onEdit,
   onDelete,
+  reorderable,
+  isDragging,
+  isDropTarget,
+  onDragStart,
+  onDragEnter,
+  onDragEnd,
+  onDrop,
 }: {
   project: Project;
   isAdmin: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  /** When true, renders a drag handle and wires up drag-and-drop reordering. Admin only. */
+  reorderable?: boolean;
+  isDragging?: boolean;
+  isDropTarget?: boolean;
+  onDragStart?: () => void;
+  onDragEnter?: () => void;
+  onDragEnd?: () => void;
+  onDrop?: () => void;
 }) {
   const thumbnailUrl = project.thumbnailObjectPath ? `/api/storage${project.thumbnailObjectPath}` : null;
   const hasDemo = project.demoType !== "none";
 
   return (
-    <div className="group relative flex flex-col rounded-2xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+    <div
+      className={cn(
+        "group relative flex flex-col rounded-2xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow",
+        isDragging && "opacity-40",
+        isDropTarget && "ring-2 ring-primary",
+      )}
+      draggable={reorderable}
+      onDragStart={(e) => {
+        if (!reorderable) return;
+        e.dataTransfer.effectAllowed = "move";
+        onDragStart?.();
+      }}
+      onDragEnter={(e) => {
+        if (!reorderable) return;
+        e.preventDefault();
+        onDragEnter?.();
+      }}
+      onDragOver={(e) => {
+        if (!reorderable) return;
+        e.preventDefault();
+      }}
+      onDrop={(e) => {
+        if (!reorderable) return;
+        e.preventDefault();
+        onDrop?.();
+      }}
+      onDragEnd={() => {
+        if (!reorderable) return;
+        onDragEnd?.();
+      }}
+    >
+      {reorderable && (
+        <div
+          className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-background/80 border border-border cursor-grab active:cursor-grabbing text-muted-foreground"
+          aria-label="Drag to reorder"
+        >
+          <GripVertical className="w-4 h-4" />
+        </div>
+      )}
       <Link
         href={`/portfolio/${project.id}/demo`}
         className={`relative block aspect-video bg-muted overflow-hidden ${hasDemo ? "cursor-pointer" : "pointer-events-none"}`}
