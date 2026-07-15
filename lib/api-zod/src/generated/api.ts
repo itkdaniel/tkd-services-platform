@@ -1030,3 +1030,51 @@ export const MarkBookingNotificationReadResponse = zod.object({
 })
 
 
+/**
+ * @summary Cancel a booking appointment (guest self-service, verified by email)
+ */
+export const CancelBookingAppointmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CancelBookingAppointmentBody = zod.object({
+  "email": zod.string().email()
+})
+
+export const CancelBookingAppointmentResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "reason": zod.string().nullable(),
+  "guestName": zod.string(),
+  "guestEmail": zod.string(),
+  "externalUserId": zod.string().nullable(),
+  "externalUserLabel": zod.string().nullable(),
+  "start": zod.string(),
+  "end": zod.string(),
+  "status": zod.enum(['confirmed', 'cancelled']),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Cancel a booking appointment (admin only, no email verification required)
+ */
+export const DeleteBookingAppointmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteBookingAppointmentResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "reason": zod.string().nullable(),
+  "guestName": zod.string(),
+  "guestEmail": zod.string(),
+  "externalUserId": zod.string().nullable(),
+  "externalUserLabel": zod.string().nullable(),
+  "start": zod.string(),
+  "end": zod.string(),
+  "status": zod.enum(['confirmed', 'cancelled']),
+  "createdAt": zod.string()
+})
+
+

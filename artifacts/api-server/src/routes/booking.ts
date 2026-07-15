@@ -4,6 +4,9 @@ import {
   CreateBookingAppointmentBody,
   ListBookingAppointmentsQueryParams,
   ListBookingNotificationsQueryParams,
+  CancelBookingAppointmentParams,
+  CancelBookingAppointmentBody,
+  DeleteBookingAppointmentParams,
 } from "@workspace/api-zod";
 import { requireRole } from "../middlewares/auth";
 import { bookingRequest, BookingServiceError } from "../lib/bookingClient";
@@ -102,6 +105,49 @@ router.get("/booking/notifications", requireRole("admin"), async (req, res): Pro
 router.patch("/booking/notifications/:id/read", requireRole("admin"), async (req, res): Promise<void> => {
   try {
     const data = await bookingRequest("PATCH", `/notifications/${encodeURIComponent(String(req.params.id))}/read`);
+    res.json(data);
+  } catch (err) {
+    handleBookingError(err, req, res);
+  }
+});
+
+// Public: a booker cancels their own appointment by supplying their email address.
+// The booking service verifies the email matches the appointment's guest email.
+router.post("/booking/appointments/:id/cancel", async (req, res): Promise<void> => {
+  const paramsParsed = CancelBookingAppointmentParams.safeParse(req.params);
+  if (!paramsParsed.success) {
+    res.status(400).json({ error: paramsParsed.error.message });
+    return;
+  }
+  const bodyParsed = CancelBookingAppointmentBody.safeParse(req.body);
+  if (!bodyParsed.success) {
+    res.status(400).json({ error: bodyParsed.error.message });
+    return;
+  }
+  try {
+    const data = await bookingRequest(
+      "POST",
+      `/appointments/${encodeURIComponent(String(paramsParsed.data.id))}/cancel`,
+      { body: { email: bodyParsed.data.email } },
+    );
+    res.json(data);
+  } catch (err) {
+    handleBookingError(err, req, res);
+  }
+});
+
+// Admin only: cancel any appointment without needing to supply the guest email.
+router.delete("/booking/appointments/:id", requireRole("admin"), async (req, res): Promise<void> => {
+  const paramsParsed = DeleteBookingAppointmentParams.safeParse(req.params);
+  if (!paramsParsed.success) {
+    res.status(400).json({ error: paramsParsed.error.message });
+    return;
+  }
+  try {
+    const data = await bookingRequest(
+      "DELETE",
+      `/appointments/${encodeURIComponent(String(paramsParsed.data.id))}`,
+    );
     res.json(data);
   } catch (err) {
     handleBookingError(err, req, res);

@@ -5,7 +5,7 @@ import { db } from "../db";
 import { appointmentsTable } from "../db/schema";
 import { isSlotBookable } from "../lib/availability";
 import { config } from "../lib/config";
-import { notify } from "../lib/notify";
+import { notify, notifyCancellation } from "../lib/notify";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -67,6 +67,109 @@ router.post("/appointments", async (req, res): Promise<void> => {
 
   res.status(201).json(serializeAppointment(appointment));
 });
+
+// ─── Cancel by guest ─────────────────────────────────────────────────────────
+
+const CancelByGuestSchema = z.object({
+  email: z.string().email(),
+});
+
+router.post("/appointments/:id/cancel", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "Invalid appointment id" });
+    return;
+  }
+
+  const parsed = CancelByGuestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [appt] = await db
+    .select()
+    .from(appointmentsTable)
+    .where(eq(appointmentsTable.id, id));
+
+  if (!appt) {
+    res.status(404).json({ error: "Appointment not found" });
+    return;
+  }
+
+  // Verify the requester owns this appointment via their email address.
+  if (appt.guestEmail.toLowerCase() !== parsed.data.email.toLowerCase()) {
+    res.status(403).json({ error: "Email does not match the appointment" });
+    return;
+  }
+
+  if (appt.status === "cancelled") {
+    res.status(409).json({ error: "Appointment is already cancelled" });
+    return;
+  }
+
+  const [updated] = await db
+    .update(appointmentsTable)
+    .set({ status: "cancelled" })
+    .where(eq(appointmentsTable.id, id))
+    .returning();
+
+  if (!updated) {
+    res.status(500).json({ error: "Failed to cancel appointment" });
+    return;
+  }
+
+  // Fire-and-forget — a cancellation email failure must not block the response.
+  notifyCancellation(updated, "guest").catch((err) =>
+    logger.error({ err, appointmentId: id }, "Error sending cancellation emails"),
+  );
+
+  res.json(serializeAppointment(updated));
+});
+
+// ─── Cancel by admin (no email verification required) ────────────────────────
+
+router.delete("/appointments/:id", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "Invalid appointment id" });
+    return;
+  }
+
+  const [appt] = await db
+    .select()
+    .from(appointmentsTable)
+    .where(eq(appointmentsTable.id, id));
+
+  if (!appt) {
+    res.status(404).json({ error: "Appointment not found" });
+    return;
+  }
+
+  if (appt.status === "cancelled") {
+    res.status(409).json({ error: "Appointment is already cancelled" });
+    return;
+  }
+
+  const [updated] = await db
+    .update(appointmentsTable)
+    .set({ status: "cancelled" })
+    .where(eq(appointmentsTable.id, id))
+    .returning();
+
+  if (!updated) {
+    res.status(500).json({ error: "Failed to cancel appointment" });
+    return;
+  }
+
+  notifyCancellation(updated, "admin").catch((err) =>
+    logger.error({ err, appointmentId: id }, "Error sending admin-cancellation emails"),
+  );
+
+  res.json(serializeAppointment(updated));
+});
+
+// ─── List appointments ────────────────────────────────────────────────────────
 
 const ListQuerySchema = z.object({
   upcomingOnly: z.coerce.boolean().optional(),

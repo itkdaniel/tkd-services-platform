@@ -13,6 +13,7 @@ import BlogDetail from '@/pages/blog-detail';
 import BlogEditor from '@/pages/blog-editor';
 import { Login, Register } from '@/pages/auth';
 import Booking from '@/pages/booking';
+import ManageBooking from '@/pages/manage-booking';
 import AdminBookings from '@/pages/admin-bookings';
 import ResumePage from '@/pages/resume';
 import Portfolio from '@/pages/portfolio';
@@ -65,6 +66,7 @@ function Router() {
             <Route path="/portfolio" component={Portfolio} />
             <Route path="/portfolio/:projectId/demo" component={ProjectDemo} />
             <Route path="/booking" component={Booking} />
+            <Route path="/manage-booking" component={ManageBooking} />
             <Route path="/admin/bookings">
               <AdminRoute component={AdminBookings} />
             </Route>

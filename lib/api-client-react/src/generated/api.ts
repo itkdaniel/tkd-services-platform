@@ -29,6 +29,7 @@ import type {
   BookingAppointmentInput,
   BookingAvailability,
   BookingNotification,
+  CancelBookingAppointmentInput,
   BuildInfo,
   ContactMessage,
   ContactMessageInput,
@@ -3550,4 +3551,147 @@ export const useMarkBookingNotificationRead = <TError = ErrorType<ErrorResponse>
       > => {
       return useMutation(getMarkBookingNotificationReadMutationOptions(options));
     }
+
+
+// ─── Cancel booking appointment (guest self-service) ─────────────────────────
+
+export const getCancelBookingAppointmentUrl = (id: number) =>
+  `/api/booking/appointments/${id}/cancel`;
+
+export const cancelBookingAppointment = async (
+  id: number,
+  data: CancelBookingAppointmentInput,
+  options?: RequestInit,
+): Promise<BookingAppointment> =>
+  customFetch<BookingAppointment>(getCancelBookingAppointmentUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(options?.headers ?? {}) },
+    body: JSON.stringify(data),
+  });
+
+export const getCancelBookingAppointmentMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelBookingAppointment>>,
+    TError,
+    { id: number; data: CancelBookingAppointmentInput },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelBookingAppointment>>,
+  TError,
+  { id: number; data: CancelBookingAppointmentInput },
+  TContext
+> => {
+  const mutationKey = ["cancelBookingAppointment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelBookingAppointment>>,
+    { id: number; data: CancelBookingAppointmentInput }
+  > = ({ id, data }) => cancelBookingAppointment(id, data, requestOptions);
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelBookingAppointmentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelBookingAppointment>>
+>;
+export type CancelBookingAppointmentMutationError = ErrorType<ErrorResponse>;
+
+export const useCancelBookingAppointment = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelBookingAppointment>>,
+    TError,
+    { id: number; data: CancelBookingAppointmentInput },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof cancelBookingAppointment>>,
+  TError,
+  { id: number; data: CancelBookingAppointmentInput },
+  TContext
+> => useMutation(getCancelBookingAppointmentMutationOptions(options));
+
+
+// ─── Cancel booking appointment (admin — no email verification) ───────────────
+
+export const getDeleteBookingAppointmentUrl = (id: number) =>
+  `/api/booking/appointments/${id}`;
+
+export const deleteBookingAppointment = async (
+  id: number,
+  options?: RequestInit,
+): Promise<BookingAppointment> =>
+  customFetch<BookingAppointment>(getDeleteBookingAppointmentUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+
+export const getDeleteBookingAppointmentMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteBookingAppointment>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteBookingAppointment>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteBookingAppointment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteBookingAppointment>>,
+    { id: number }
+  > = ({ id }) => deleteBookingAppointment(id, requestOptions);
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteBookingAppointmentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteBookingAppointment>>
+>;
+export type DeleteBookingAppointmentMutationError = ErrorType<ErrorResponse>;
+
+export const useDeleteBookingAppointment = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteBookingAppointment>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteBookingAppointment>>,
+  TError,
+  { id: number },
+  TContext
+> => useMutation(getDeleteBookingAppointmentMutationOptions(options));
 

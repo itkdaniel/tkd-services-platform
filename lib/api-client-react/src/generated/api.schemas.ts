@@ -471,6 +471,10 @@ from: string;
 to: string;
 };
 
+export interface CancelBookingAppointmentInput {
+  email: string;
+}
+
 export type ListBookingAppointmentsParams = {
 upcomingOnly?: boolean;
 };

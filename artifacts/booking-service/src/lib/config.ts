@@ -53,4 +53,9 @@ export const config = {
 
   // How often the reminder scheduler checks for due reminders.
   reminderCheckCron: process.env.REMINDER_CHECK_CRON ?? "*/15 * * * *",
+
+  // Public-facing base URL of the host app (e.g. "https://mysite.example.com/tkd-services").
+  // Used to build cancel links embedded in confirmation emails. Optional — if unset the
+  // cancellation link is omitted from emails rather than crashing the send path.
+  siteUrl: process.env.SITE_URL ?? "",
 };

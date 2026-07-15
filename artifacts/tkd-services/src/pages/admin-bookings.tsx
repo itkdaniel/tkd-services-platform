@@ -3,11 +3,25 @@ import {
   useListBookingNotifications,
   useListBookingAppointments,
   useMarkBookingNotificationRead,
+  useDeleteBookingAppointment,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Bell, CalendarClock, Mail, MailOpen } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Bell, CalendarClock, Mail, MailOpen, Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { getListBookingAppointmentsQueryKey } from "@workspace/api-client-react";
 
 const KIND_LABEL: Record<string, string> = {
   new_booking: "New booking",
@@ -20,6 +34,22 @@ export default function AdminBookings() {
   const notifications = useListBookingNotifications();
   const appointments = useListBookingAppointments({ upcomingOnly: true });
   const markRead = useMarkBookingNotificationRead();
+  const deleteAppt = useDeleteBookingAppointment();
+  const queryClient = useQueryClient();
+
+  function handleCancelAppointment(id: number) {
+    deleteAppt.mutate(
+      { id },
+      {
+        onSuccess: () => {
+          // Invalidate the appointments list so the cancelled one disappears.
+          queryClient.invalidateQueries({
+            queryKey: getListBookingAppointmentsQueryKey({ upcomingOnly: true }),
+          });
+        },
+      },
+    );
+  }
 
   return (
     <div className="flex flex-col w-full animate-in fade-in duration-500">
@@ -95,27 +125,75 @@ export default function AdminBookings() {
             )}
             {appointments.data?.map((a) => (
               <div key={a.id} className="border border-border bg-card rounded-xl p-4">
-                <div className="flex items-center justify-between">
-                  <p className="font-medium text-foreground">{a.title}</p>
-                  <span className="text-sm text-muted-foreground">
-                    {new Date(a.start).toLocaleString(undefined, {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}
-                  </span>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <p className="font-medium text-foreground">{a.title}</p>
+                      <span className="text-sm text-muted-foreground shrink-0">
+                        {new Date(a.start).toLocaleString(undefined, {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                    {a.reason && <p className="text-sm text-muted-foreground mt-1">{a.reason}</p>}
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {a.guestName} &lt;{a.guestEmail}&gt;
+                      {a.externalUserLabel && (
+                        <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                          Account: {a.externalUserLabel}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                        disabled={deleteAppt.isPending}
+                      >
+                        {deleteAppt.isPending && deleteAppt.variables?.id === a.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          "Cancel"
+                        )}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Cancel appointment?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will cancel the appointment with{" "}
+                          <strong>{a.guestName}</strong> on{" "}
+                          {new Date(a.start).toLocaleString(undefined, {
+                            weekday: "long",
+                            month: "long",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}
+                          . A cancellation email will be sent to the guest and the slot
+                          will be freed up immediately. This cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Keep appointment</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                          onClick={() => handleCancelAppointment(a.id)}
+                        >
+                          Cancel appointment
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
-                {a.reason && <p className="text-sm text-muted-foreground mt-1">{a.reason}</p>}
-                <p className="text-sm text-muted-foreground mt-2">
-                  {a.guestName} &lt;{a.guestEmail}&gt;
-                  {a.externalUserLabel && (
-                    <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                      Account: {a.externalUserLabel}
-                    </span>
-                  )}
-                </p>
               </div>
             ))}
           </TabsContent>

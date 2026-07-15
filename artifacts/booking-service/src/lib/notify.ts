@@ -8,20 +8,39 @@ function formatWhen(appt: Appointment): string {
   return `${appt.startTime.toUTCString()} – ${appt.endTime.toUTCString()}`;
 }
 
-function bodyFor(appt: Appointment, intro: string): { text: string; html: string } {
+/** Build a cancel-link URL for the guest, embedded in confirmation emails. */
+function buildCancelLink(appt: Appointment): string {
+  if (!config.siteUrl) return "";
+  const base = config.siteUrl.replace(/\/$/, "");
+  return `${base}/manage-booking?id=${appt.id}&email=${encodeURIComponent(appt.guestEmail)}`;
+}
+
+function bodyFor(
+  appt: Appointment,
+  intro: string,
+  opts?: { includeCancelLink?: boolean },
+): { text: string; html: string } {
   const when = formatWhen(appt);
   const reasonLine = appt.reason ? `\nReason: ${appt.reason}` : "";
+  const cancelLink = opts?.includeCancelLink ? buildCancelLink(appt) : "";
+  const cancelTextLine = cancelLink ? `\n\nNeed to cancel? Visit: ${cancelLink}` : "";
+  const cancelHtmlBlock = cancelLink
+    ? `<p style="margin-top:16px">Need to cancel? <a href="${escapeHtml(cancelLink)}">Click here to manage your booking</a>.</p>`
+    : "";
+
   const text =
     `${intro}\n\n` +
     `Title: ${appt.title}${reasonLine}\n` +
     `When: ${when}\n` +
-    `With: ${appt.guestName} <${appt.guestEmail}>`;
+    `With: ${appt.guestName} <${appt.guestEmail}>` +
+    cancelTextLine;
   const html =
     `<p>${intro}</p>` +
     `<p><strong>Title:</strong> ${escapeHtml(appt.title)}</p>` +
     (appt.reason ? `<p><strong>Reason:</strong> ${escapeHtml(appt.reason)}</p>` : "") +
     `<p><strong>When:</strong> ${escapeHtml(when)}</p>` +
-    `<p><strong>With:</strong> ${escapeHtml(appt.guestName)} &lt;${escapeHtml(appt.guestEmail)}&gt;</p>`;
+    `<p><strong>With:</strong> ${escapeHtml(appt.guestName)} &lt;${escapeHtml(appt.guestEmail)}&gt;</p>` +
+    cancelHtmlBlock;
   return { text, html };
 }
 
@@ -57,7 +76,10 @@ export async function notify(
 ): Promise<void> {
   const to = recipient === "guest" ? appt.guestEmail : config.adminEmail;
   const subject = SUBJECTS[kind];
-  const { text, html } = bodyFor(appt, INTROS[kind]);
+  // Include the cancel link only in the guest's new-booking confirmation.
+  const { text, html } = bodyFor(appt, INTROS[kind], {
+    includeCancelLink: kind === "new_booking" && recipient === "guest",
+  });
 
   let emailSent = false;
   if (to) {
@@ -74,4 +96,48 @@ export async function notify(
     message: text,
     emailSent,
   });
+}
+
+/**
+ * Sends a cancellation email to the guest and (if configured) the admin.
+ * Does NOT insert a row in notificationsTable — cancellation isn't an inbox
+ * kind, and it only ever fires once per appointment anyway.
+ */
+export async function notifyCancellation(appt: Appointment, cancelledBy: "guest" | "admin"): Promise<void> {
+  const when = formatWhen(appt);
+  const byLine = cancelledBy === "admin" ? " (cancelled by admin)" : "";
+  const guestSubject = "Appointment cancelled";
+  const guestText =
+    `Your appointment has been cancelled${byLine}.\n\n` +
+    `Title: ${appt.title}\n` +
+    `When: ${when}\n\n` +
+    `If you'd like to rebook, visit our booking page.`;
+  const guestHtml =
+    `<p>Your appointment has been cancelled${byLine}.</p>` +
+    `<p><strong>Title:</strong> ${escapeHtml(appt.title)}</p>` +
+    `<p><strong>When:</strong> ${escapeHtml(when)}</p>` +
+    `<p>If you'd like to rebook, visit our booking page.</p>`;
+
+  if (appt.guestEmail) {
+    const sent = await sendEmail({ to: appt.guestEmail, subject: guestSubject, text: guestText, html: guestHtml });
+    if (!sent) logger.warn({ appointmentId: appt.id }, "Failed to send guest cancellation email");
+  }
+
+  if (config.adminEmail) {
+    const adminSubject = `Booking cancelled: ${appt.title}`;
+    const adminText =
+      `An appointment has been cancelled.\n\n` +
+      `Title: ${appt.title}\n` +
+      `When: ${when}\n` +
+      `Guest: ${appt.guestName} <${appt.guestEmail}>\n` +
+      `Cancelled by: ${cancelledBy}`;
+    const adminHtml =
+      `<p>An appointment has been cancelled.</p>` +
+      `<p><strong>Title:</strong> ${escapeHtml(appt.title)}</p>` +
+      `<p><strong>When:</strong> ${escapeHtml(when)}</p>` +
+      `<p><strong>Guest:</strong> ${escapeHtml(appt.guestName)} &lt;${escapeHtml(appt.guestEmail)}&gt;</p>` +
+      `<p><strong>Cancelled by:</strong> ${cancelledBy}</p>`;
+    const sent = await sendEmail({ to: config.adminEmail, subject: adminSubject, text: adminText, html: adminHtml });
+    if (!sent) logger.warn({ appointmentId: appt.id }, "Failed to send admin cancellation email");
+  }
 }
