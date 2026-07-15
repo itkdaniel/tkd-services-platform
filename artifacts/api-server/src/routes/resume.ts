@@ -15,6 +15,7 @@ import {
 import { requireRole } from "../middlewares/auth";
 import { toPlain } from "../lib/serialize";
 import { ObjectStorageService, UPLOAD_INTENT_TTL_MS } from "../lib/objectStorage";
+import { notifyAdminOfResumeUpload } from "../lib/adminNotify";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -132,6 +133,16 @@ router.post("/resume/versions", requireRole("user", "admin"), async (req, res): 
     res.status(409).json({ error: "This upload has already been recorded" });
     return;
   }
+
+  // Fire-and-forget: the admin should hear about every new upload, but a
+  // slow/failed email must never delay or fail the upload response itself.
+  notifyAdminOfResumeUpload({
+    uploaderUsername: currentUser.username,
+    filename: version.filename,
+    historyUrl: `${req.protocol}://${req.get("host")}/tkd-services/resume`,
+  }).catch((err) => {
+    req.log.error({ err }, "Failed to notify admin of new résumé upload");
+  });
 
   res.status(201).json(CreateResumeVersionResponse.parse(toPlain(version)));
 });

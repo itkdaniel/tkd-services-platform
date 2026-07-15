@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterAll, beforeEach } from "vitest";
 
 vi.mock("../lib/objectStorage");
+vi.mock("../lib/adminNotify");
 
 import {
   agent,
@@ -11,6 +12,7 @@ import {
   deleteResumeVersionsByIds,
 } from "../test/helpers";
 import { __mockFiles } from "../lib/__mocks__/objectStorage";
+import { notifyAdminOfResumeUpload } from "../lib/adminNotify";
 
 describe("résumé versions", () => {
   const createdUserIds: number[] = [];
@@ -51,6 +53,9 @@ describe("résumé versions", () => {
     expect(res.status).toBe(201);
     expect(res.body.isCurrent).toBe(true);
     expect(res.body.uploaderUsername).toBe(user.username);
+    expect(notifyAdminOfResumeUpload).toHaveBeenCalledWith(
+      expect.objectContaining({ uploaderUsername: user.username, filename: "resume.pdf" }),
+    );
   });
 
   it("rejects a non-PDF content type", async () => {

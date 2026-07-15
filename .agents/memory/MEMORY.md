@@ -19,3 +19,4 @@
 - [pnpm catalog standalone extraction](pnpm-catalog-standalone-extraction.md) — resolve `catalog:` specifiers to concrete versions before publishing an extracted package as its own standalone repo.
 - [Freeze "now" for relative-offset test fixtures](frozen-time-test-fixtures.md) — "N hours from now" fixtures flip pass/fail by time of day unless the clock is frozen in tests.
 - [api-server dev DB schema drift](api-server-dev-db-schema-drift.md) — `object_upload_intents`/`resume_versions` can be entirely absent from the dev DB even with passing prior work; check `information_schema.columns` before assuming test failures are your bug.
+- [ADMIN_NOTIFICATION_EMAIL is shared](admin-notification-email-shared.md) — one workspace-wide admin email env var already exists (from booking-service); reuse it instead of adding a per-service duplicate.
