@@ -17,6 +17,8 @@ export function ProjectCard({
   onDragEnter,
   onDragEnd,
   onDrop,
+  activeTag,
+  onTagClick,
 }: {
   project: Project;
   isAdmin: boolean;
@@ -30,9 +32,14 @@ export function ProjectCard({
   onDragEnter?: () => void;
   onDragEnd?: () => void;
   onDrop?: () => void;
+  /** The currently active tag filter, if any. */
+  activeTag?: string | null;
+  /** Called when a tag badge is clicked. */
+  onTagClick?: (tag: string) => void;
 }) {
   const thumbnailUrl = project.thumbnailObjectPath ? `/api/storage${project.thumbnailObjectPath}` : null;
   const hasDemo = project.demoType !== "none";
+  const tags = project.tags ?? [];
 
   return (
     <div
@@ -104,6 +111,28 @@ export function ProjectCard({
       <div className="flex-1 flex flex-col p-5 gap-2">
         <h3 className="text-xl font-serif font-bold text-foreground">{project.name}</h3>
         <p className="text-sm text-muted-foreground line-clamp-3 flex-1">{project.description}</p>
+
+        {/* Tags */}
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {tags.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => onTagClick?.(tag)}
+                className={cn(
+                  "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
+                  activeTag === tag
+                    ? "bg-foreground text-background"
+                    : "bg-muted text-muted-foreground hover:bg-muted/70",
+                  !onTagClick && "cursor-default",
+                )}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="flex items-center justify-between pt-3 mt-1 border-t border-border/60 gap-2 flex-wrap">
           <div className="flex items-center gap-2 flex-wrap">

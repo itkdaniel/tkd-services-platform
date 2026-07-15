@@ -23,7 +23,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ImagePlus, Loader2, UploadCloud, PackageX } from "lucide-react";
+import { ImagePlus, Loader2, UploadCloud, PackageX, X } from "lucide-react";
 
 const MAX_THUMBNAIL_BYTES = 5 * 1024 * 1024;
 const ALLOWED_THUMBNAIL_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
@@ -53,6 +53,8 @@ export function ProjectFormDialog({
   const [demoUrl, setDemoUrl] = useState("");
   const [thumbnailObjectPath, setThumbnailObjectPath] = useState<string | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { upload, isUploading } = useDirectUpload();
@@ -65,6 +67,8 @@ export function ProjectFormDialog({
       setDemoUrl(project?.demoUrl ?? "");
       setThumbnailObjectPath(project?.thumbnailObjectPath ?? null);
       setThumbnailPreview(project?.thumbnailObjectPath ? `/api/storage${project.thumbnailObjectPath}` : null);
+      setTags(project?.tags ?? []);
+      setTagInput("");
     }
   }, [open, project]);
 
@@ -145,6 +149,26 @@ export function ProjectFormDialog({
     }
   };
 
+  const addTag = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed || tags.includes(trimmed)) return;
+    setTags((prev) => [...prev, trimmed]);
+  };
+
+  const removeTag = (tag: string) => {
+    setTags((prev) => prev.filter((t) => t !== tag));
+  };
+
+  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addTag(tagInput);
+      setTagInput("");
+    } else if (e.key === "Backspace" && tagInput === "" && tags.length > 0) {
+      setTags((prev) => prev.slice(0, -1));
+    }
+  };
+
   const handleSubmit = async () => {
     if (!name.trim() || !description.trim()) {
       toast({ title: "Missing fields", description: "Name and description are required.", variant: "destructive" });
@@ -157,6 +181,7 @@ export function ProjectFormDialog({
       githubUrl: githubUrl.trim() || null,
       demoUrl: demoUrl.trim() || null,
       thumbnailObjectPath,
+      tags,
     };
 
     try {
@@ -234,6 +259,40 @@ export function ProjectFormDialog({
               placeholder="A short summary of what this project is and does."
               className="min-h-24"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="project-tags">Tags</Label>
+            <div className="flex flex-wrap items-center gap-1.5 min-h-9 rounded-md border border-input bg-transparent px-3 py-1.5 focus-within:ring-1 focus-within:ring-ring">
+              {tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="gap-1 pr-1">
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    className="rounded-sm hover:bg-muted-foreground/20 p-0.5"
+                    aria-label={`Remove tag ${tag}`}
+                  >
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                </Badge>
+              ))}
+              <input
+                id="project-tags"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                onBlur={() => {
+                  if (tagInput.trim()) {
+                    addTag(tagInput);
+                    setTagInput("");
+                  }
+                }}
+                placeholder={tags.length === 0 ? "React, backend, API…" : ""}
+                className="flex-1 min-w-24 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">Press Enter or comma to add a tag.</p>
           </div>
 
           <div className="space-y-2">

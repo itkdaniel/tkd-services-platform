@@ -14,4 +14,6 @@ export interface ProjectCreateInput {
   thumbnailObjectPath?: string;
   githubUrl?: string;
   demoUrl?: string;
+  /** Free-form tags for filtering. */
+  tags?: string[];
 }

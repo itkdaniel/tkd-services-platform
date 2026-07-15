@@ -17,4 +17,6 @@ export interface ProjectUpdateInput {
   githubUrl?: string | null;
   /** @nullable */
   demoUrl?: string | null;
+  /** Free-form tags for filtering. */
+  tags?: string[];
 }

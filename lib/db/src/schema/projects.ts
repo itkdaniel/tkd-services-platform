@@ -23,6 +23,9 @@ export const projectsTable = pgTable("projects", {
   // can never read or overwrite another project's files.
   subappObjectPrefix: text("subapp_object_prefix"),
   subappEntrypoint: text("subapp_entrypoint").default("index.html"),
+  // Free-form tags for filtering (e.g. "React", "backend"). Stored as a
+  // postgres text array; defaults to an empty array for existing rows.
+  tags: text("tags").array().notNull().default([]),
   // Lower values sort first. Defaults to 0 for newly-created rows; the API
   // assigns new projects a value one higher than the current max so they
   // land at the end of the admin-defined order rather than jumping to the front.

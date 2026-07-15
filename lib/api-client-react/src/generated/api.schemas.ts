@@ -327,6 +327,8 @@ export interface Project {
   subappObjectPrefix: string | null;
   /** @nullable */
   subappEntrypoint: string | null;
+  /** Free-form tags for filtering (e.g. "React", "backend"). */
+  tags: string[];
   sortOrder: number;
   ownerId: number;
   ownerUsername: string;
@@ -342,6 +344,8 @@ export interface ProjectCreateInput {
   thumbnailObjectPath?: string;
   githubUrl?: string;
   demoUrl?: string;
+  /** Free-form tags for filtering. */
+  tags?: string[];
 }
 
 export interface ProjectUpdateInput {
@@ -355,6 +359,8 @@ export interface ProjectUpdateInput {
   githubUrl?: string | null;
   /** @nullable */
   demoUrl?: string | null;
+  /** Free-form tags for filtering. */
+  tags?: string[];
 }
 
 export interface ProjectReorderInput {

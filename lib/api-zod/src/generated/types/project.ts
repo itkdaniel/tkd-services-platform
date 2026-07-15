@@ -23,6 +23,8 @@ export interface Project {
   subappObjectPrefix: string | null;
   /** @nullable */
   subappEntrypoint: string | null;
+  /** Free-form tags for filtering (e.g. "React", "backend"). */
+  tags: string[];
   sortOrder: number;
   ownerId: number;
   ownerUsername: string;

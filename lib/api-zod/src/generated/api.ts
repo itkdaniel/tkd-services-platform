@@ -634,6 +634,7 @@ export const ListProjectsResponseItem = zod.object({
   "demoUrl": zod.string().nullable(),
   "subappObjectPrefix": zod.string().nullable(),
   "subappEntrypoint": zod.string().nullable(),
+  "tags": zod.array(zod.string()),
   "sortOrder": zod.number(),
   "ownerId": zod.number(),
   "ownerUsername": zod.string(),
@@ -655,7 +656,8 @@ export const CreateProjectBody = zod.object({
   "description": zod.string().min(1),
   "thumbnailObjectPath": zod.string().optional(),
   "githubUrl": zod.string().optional(),
-  "demoUrl": zod.string().optional()
+  "demoUrl": zod.string().optional(),
+  "tags": zod.array(zod.string()).optional()
 })
 
 export const CreateProjectResponse = zod.object({
@@ -669,6 +671,7 @@ export const CreateProjectResponse = zod.object({
   "demoUrl": zod.string().nullable(),
   "subappObjectPrefix": zod.string().nullable(),
   "subappEntrypoint": zod.string().nullable(),
+  "tags": zod.array(zod.string()),
   "sortOrder": zod.number(),
   "ownerId": zod.number(),
   "ownerUsername": zod.string(),
@@ -700,6 +703,7 @@ export const ReorderProjectsResponseItem = zod.object({
   "demoUrl": zod.string().nullable(),
   "subappObjectPrefix": zod.string().nullable(),
   "subappEntrypoint": zod.string().nullable(),
+  "tags": zod.array(zod.string()),
   "sortOrder": zod.number(),
   "ownerId": zod.number(),
   "ownerUsername": zod.string(),
@@ -728,6 +732,7 @@ export const GetProjectResponse = zod.object({
   "demoUrl": zod.string().nullable(),
   "subappObjectPrefix": zod.string().nullable(),
   "subappEntrypoint": zod.string().nullable(),
+  "tags": zod.array(zod.string()),
   "sortOrder": zod.number(),
   "ownerId": zod.number(),
   "ownerUsername": zod.string(),
@@ -752,7 +757,8 @@ export const UpdateProjectBody = zod.object({
   "description": zod.string().min(1).optional(),
   "thumbnailObjectPath": zod.string().nullish(),
   "githubUrl": zod.string().nullish(),
-  "demoUrl": zod.string().nullish()
+  "demoUrl": zod.string().nullish(),
+  "tags": zod.array(zod.string()).optional()
 })
 
 export const UpdateProjectResponse = zod.object({
@@ -766,6 +772,7 @@ export const UpdateProjectResponse = zod.object({
   "demoUrl": zod.string().nullable(),
   "subappObjectPrefix": zod.string().nullable(),
   "subappEntrypoint": zod.string().nullable(),
+  "tags": zod.array(zod.string()),
   "sortOrder": zod.number(),
   "ownerId": zod.number(),
   "ownerUsername": zod.string(),
@@ -836,6 +843,7 @@ export const RegisterProjectSubappResponse = zod.object({
   "demoUrl": zod.string().nullable(),
   "subappObjectPrefix": zod.string().nullable(),
   "subappEntrypoint": zod.string().nullable(),
+  "tags": zod.array(zod.string()),
   "sortOrder": zod.number(),
   "ownerId": zod.number(),
   "ownerUsername": zod.string(),
@@ -862,6 +870,7 @@ export const RemoveProjectSubappResponse = zod.object({
   "demoUrl": zod.string().nullable(),
   "subappObjectPrefix": zod.string().nullable(),
   "subappEntrypoint": zod.string().nullable(),
+  "tags": zod.array(zod.string()),
   "sortOrder": zod.number(),
   "ownerId": zod.number(),
   "ownerUsername": zod.string(),

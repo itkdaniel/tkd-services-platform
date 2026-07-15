@@ -139,7 +139,7 @@ router.post("/projects", requireRole("admin"), async (req, res): Promise<void> =
     return;
   }
   const currentUser = req.currentUser!;
-  const { name, description, thumbnailObjectPath, githubUrl, demoUrl } = parsed.data;
+  const { name, description, thumbnailObjectPath, githubUrl, demoUrl, tags } = parsed.data;
 
   if (thumbnailObjectPath) {
     const claim = await claimUploadIntent(thumbnailObjectPath, currentUser.id);
@@ -177,6 +177,7 @@ router.post("/projects", requireRole("admin"), async (req, res): Promise<void> =
       githubUrl: githubUrl ?? null,
       demoUrl: demoUrl ?? null,
       demoType: demoUrl ? "external" : "none",
+      tags: tags ?? [],
       sortOrder: Number(maxSortOrder) + 1,
       ownerId: currentUser.id,
       ownerUsername: currentUser.username,
@@ -271,12 +272,13 @@ router.patch("/projects/:projectId", requireRole("admin"), async (req, res): Pro
     return;
   }
 
-  const { name, description, thumbnailObjectPath, githubUrl, demoUrl } = parsed.data;
+  const { name, description, thumbnailObjectPath, githubUrl, demoUrl, tags } = parsed.data;
   const patch: Partial<typeof projectsTable.$inferInsert> = {};
 
   if (name !== undefined) patch.name = name;
   if (description !== undefined) patch.description = description;
   if (githubUrl !== undefined) patch.githubUrl = githubUrl;
+  if (tags !== undefined) patch.tags = tags;
 
   let oldThumbnailToDelete: string | null = null;
   if (thumbnailObjectPath !== undefined && thumbnailObjectPath !== existing.thumbnailObjectPath) {

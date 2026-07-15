@@ -1871,6 +1871,7 @@ components:
           demoUrl,
           subappObjectPrefix,
           subappEntrypoint,
+          tags,
           sortOrder,
           ownerId,
           ownerUsername,
@@ -1899,6 +1900,11 @@ components:
           type: ["string", "null"]
         subappEntrypoint:
           type: ["string", "null"]
+        tags:
+          type: array
+          items:
+            type: string
+          description: Free-form tags for filtering (e.g. "React", "backend").
         sortOrder:
           type: integer
         ownerId:
@@ -1926,6 +1932,11 @@ components:
           type: string
         demoUrl:
           type: string
+        tags:
+          type: array
+          items:
+            type: string
+          description: Free-form tags for filtering.
 
     ProjectUpdateInput:
       type: object
@@ -1942,6 +1953,11 @@ components:
           type: ["string", "null"]
         demoUrl:
           type: ["string", "null"]
+        tags:
+          type: array
+          items:
+            type: string
+          description: Free-form tags for filtering.
 
     ProjectReorderInput:
       type: object
