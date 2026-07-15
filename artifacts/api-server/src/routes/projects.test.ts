@@ -4,7 +4,7 @@ import AdmZip from "adm-zip";
 vi.mock("../lib/objectStorage");
 
 import { agent, createUser, loginAs, issueUploadIntent, deleteUsersByIds, deleteProjectsByIds } from "../test/helpers";
-import { __mockFiles } from "../lib/__mocks__/objectStorage";
+import { __mockFiles, __mockPrefixSizes } from "../lib/__mocks__/objectStorage";
 
 function zipBuffer(files: Record<string, string>): Buffer {
   const zip = new AdmZip();
@@ -25,6 +25,7 @@ describe("projects (portfolio)", () => {
 
   beforeEach(() => {
     __mockFiles.clear();
+    __mockPrefixSizes.clear();
     vi.clearAllMocks();
   });
 
@@ -142,6 +143,28 @@ describe("projects (portfolio)", () => {
     });
   });
 
+  describe("subapp storage usage", () => {
+    it("reports current usage and quota to admins", async () => {
+      const admin = await createUser("admin");
+      createdUserIds.push(admin.id);
+      const cookie = await loginAs(admin);
+      __mockPrefixSizes.set("subapps/", 12345);
+
+      const res = await agent().get("/api/projects/subapp-storage").set("Cookie", cookie);
+      expect(res.status).toBe(200);
+      expect(res.body.usedBytes).toBe(12345);
+      expect(res.body.quotaBytes).toBeGreaterThan(0);
+    });
+
+    it("blocks a non-admin from viewing storage usage", async () => {
+      const user = await createUser("user");
+      createdUserIds.push(user.id);
+      const cookie = await loginAs(user);
+      const res = await agent().get("/api/projects/subapp-storage").set("Cookie", cookie);
+      expect(res.status).toBe(403);
+    });
+  });
+
   describe("archive upload (sub-app hosting)", () => {
     async function createProject(cookie: string) {
       const res = await agent().post("/api/projects").set("Cookie", cookie).send({ name: "Sub-app Demo", description: "desc" });
@@ -242,6 +265,64 @@ describe("projects (portfolio)", () => {
       expect(res.status).toBe(200);
       expect(res.body.demoType).toBe("none");
       expect(res.body.subappObjectPrefix).toBeNull();
+    });
+
+    it("rejects an upload that would push total sub-app storage over the shared quota", async () => {
+      const admin = await createUser("admin");
+      createdUserIds.push(admin.id);
+      const cookie = await loginAs(admin);
+      const project = await createProject(cookie);
+
+      // Simulate other projects' sub-apps already occupying more than the
+      // entire (test-mocked) quota, so even this tiny upload tips it over.
+      __mockPrefixSizes.set("subapps/", 600 * 1024 * 1024);
+
+      const objectPath = await issueUploadIntent(admin.id);
+      const buffer = zipBuffer({ "index.html": "<html>hi</html>" });
+      __mockFiles.set(objectPath, { download: async () => [buffer], delete: vi.fn(async () => {}) });
+
+      const res = await agent()
+        .post(`/api/projects/${project.id}/subapp`)
+        .set("Cookie", cookie)
+        .send({ objectPath, filename: "site.zip", contentType: "application/zip", sizeBytes: buffer.length });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/quota/i);
+
+      // And the project must not have been switched to a subapp demo.
+      const getRes = await agent().get(`/api/projects/${project.id}`);
+      expect(getRes.body.demoType).toBe("none");
+    });
+
+    it("nets out a project's own previous sub-app size before checking the quota", async () => {
+      const admin = await createUser("admin");
+      createdUserIds.push(admin.id);
+      const cookie = await loginAs(admin);
+      const project = await createProject(cookie);
+
+      // First upload establishes a previous prefix for this project.
+      const firstObjectPath = await issueUploadIntent(admin.id);
+      const firstBuffer = zipBuffer({ "index.html": "<html>first</html>" });
+      __mockFiles.set(firstObjectPath, { download: async () => [firstBuffer], delete: vi.fn(async () => {}) });
+      const firstRes = await agent()
+        .post(`/api/projects/${project.id}/subapp`)
+        .set("Cookie", cookie)
+        .send({ objectPath: firstObjectPath, filename: "site.zip", contentType: "application/zip", sizeBytes: firstBuffer.length });
+      expect(firstRes.status).toBe(200);
+      const previousPrefix = firstRes.body.subappObjectPrefix as string;
+
+      // Total usage counts almost entirely this project's own (about-to-be-replaced) bundle.
+      __mockPrefixSizes.set("subapps/", 100 * 1024 * 1024);
+      __mockPrefixSizes.set(previousPrefix, 100 * 1024 * 1024);
+
+      const secondObjectPath = await issueUploadIntent(admin.id);
+      const secondBuffer = zipBuffer({ "index.html": "<html>second</html>" });
+      __mockFiles.set(secondObjectPath, { download: async () => [secondBuffer], delete: vi.fn(async () => {}) });
+      const secondRes = await agent()
+        .post(`/api/projects/${project.id}/subapp`)
+        .set("Cookie", cookie)
+        .send({ objectPath: secondObjectPath, filename: "site.zip", contentType: "application/zip", sizeBytes: secondBuffer.length });
+      expect(secondRes.status).toBe(200);
+      expect(secondRes.body.demoType).toBe("subapp");
     });
 
     it("blocks a non-admin from uploading a sub-app archive", async () => {

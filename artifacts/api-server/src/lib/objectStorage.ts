@@ -245,6 +245,24 @@ export class ObjectStorageService {
   }
 
   /**
+   * Sums the size (in bytes) of every object stored under a given prefix
+   * (e.g. a single project's "subapps/<uuid>" bundle, or the shared
+   * "subapps/" root across all projects). Used to enforce the total
+   * sub-app storage quota before extracting a newly-uploaded archive.
+   */
+  async getTotalSizeUnderPrefix(prefix: string): Promise<number> {
+    let entityDir = this.getPrivateObjectDir();
+    if (!entityDir.endsWith('/')) {
+      entityDir = `${entityDir}/`;
+    }
+    const fullPrefix = `${entityDir}${prefix}`;
+    const { bucketName, objectName } = parseObjectPath(fullPrefix);
+    const bucket = objectStorageClient.bucket(bucketName);
+    const [files] = await bucket.getFiles({ prefix: objectName });
+    return files.reduce((sum, file) => sum + Number(file.metadata.size ?? 0), 0);
+  }
+
+  /**
    * Lists every object entity stored under a given prefix (e.g. "uploads/"),
    * returning each object's public-facing objectPath alongside its GCS File
    * handle and creation time. Used by the orphaned-upload sweep to find

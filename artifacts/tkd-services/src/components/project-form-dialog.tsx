@@ -5,6 +5,8 @@ import {
   useUpdateProject,
   useRegisterProjectSubapp,
   useRemoveProjectSubapp,
+  useGetProjectSubappStorageUsage,
+  getGetProjectSubappStorageUsageQueryKey,
 } from "@workspace/api-client-react";
 import { useDirectUpload } from "@/hooks/use-direct-upload";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +28,10 @@ import { ImagePlus, Loader2, UploadCloud, PackageX } from "lucide-react";
 const MAX_THUMBNAIL_BYTES = 5 * 1024 * 1024;
 const ALLOWED_THUMBNAIL_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 const MAX_ARCHIVE_BYTES = 25 * 1024 * 1024;
+
+function formatMB(bytes: number): string {
+  return (bytes / (1024 * 1024)).toFixed(0);
+}
 
 export function ProjectFormDialog({
   open,
@@ -71,6 +77,15 @@ export function ProjectFormDialog({
   const removeSubapp = useRemoveProjectSubapp();
   const archiveInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+
+  // Only fetched while the dialog is open and editing, since it's admin-only
+  // and there's no point polling it from the create-project form.
+  const storageUsage = useGetProjectSubappStorageUsage({
+    query: { enabled: open && isEditing, queryKey: getGetProjectSubappStorageUsageQueryKey() },
+  });
+  const usagePercent = storageUsage.data
+    ? Math.min(100, Math.round((storageUsage.data.usedBytes / storageUsage.data.quotaBytes) * 100))
+    : null;
 
   const handleArchiveFile = async (file: File | undefined) => {
     if (!file || !project) return;
@@ -247,6 +262,20 @@ export function ProjectFormDialog({
           {isEditing && (
             <div className="space-y-2 pt-2 border-t border-border">
               <Label>Live sub-app archive</Label>
+              {storageUsage.data && usagePercent !== null && (
+                <div className="space-y-1">
+                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${usagePercent >= 90 ? "bg-destructive" : "bg-primary"}`}
+                      style={{ width: `${usagePercent}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Shared sub-app storage: {formatMB(storageUsage.data.usedBytes)}MB of{" "}
+                    {formatMB(storageUsage.data.quotaBytes)}MB used across all projects ({usagePercent}%).
+                  </p>
+                </div>
+              )}
               {project!.demoType === "subapp" ? (
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 p-3">
                   <div className="flex items-center gap-2 text-sm">

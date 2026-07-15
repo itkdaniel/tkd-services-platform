@@ -20,3 +20,4 @@
 - [Freeze "now" for relative-offset test fixtures](frozen-time-test-fixtures.md) — "N hours from now" fixtures flip pass/fail by time of day unless the clock is frozen in tests.
 - [api-server dev DB schema drift](api-server-dev-db-schema-drift.md) — `object_upload_intents`/`resume_versions` can be entirely absent from the dev DB even with passing prior work; check `information_schema.columns` before assuming test failures are your bug.
 - [ADMIN_NOTIFICATION_EMAIL is shared](admin-notification-email-shared.md) — one workspace-wide admin email env var already exists (from booking-service); reuse it instead of adding a per-service duplicate.
+- [Sub-app storage quota enforcement](subapp-storage-quota.md) — total usage is a live GCS listing under "subapps/", netted against the project's own previous prefix, not a DB column.

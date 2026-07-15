@@ -47,6 +47,7 @@ export * from './project';
 export * from './projectCreateInput';
 export * from './projectDemoType';
 export * from './projectReorderInput';
+export * from './projectSubappStorageUsage';
 export * from './projectSubappUploadInput';
 export * from './projectUpdateInput';
 export * from './registerInput';

@@ -21,6 +21,7 @@ import {
   RegisterProjectSubappResponse,
   RemoveProjectSubappParams,
   RemoveProjectSubappResponse,
+  GetProjectSubappStorageUsageResponse,
 } from "@workspace/api-zod";
 import { requireRole } from "../middlewares/auth";
 import { toPlain } from "../lib/serialize";
@@ -32,6 +33,26 @@ const objectStorageService = new ObjectStorageService();
 const MAX_ARCHIVE_SIZE_BYTES = 25 * 1024 * 1024; // 25MB compressed
 const MAX_UNCOMPRESSED_BYTES = 75 * 1024 * 1024; // 75MB extracted
 const MAX_ARCHIVE_ENTRIES = 1000;
+
+// Prefix every extracted sub-app lives under, shared across all projects.
+// Used both to write a project's own bundle (subapps/<uuid>/...) and to sum
+// total usage for the quota check below.
+const SUBAPP_STORAGE_ROOT_PREFIX = "subapps/";
+
+// Combined ceiling on how much extracted sub-app content all projects may
+// occupy in the shared object storage bucket at once, regardless of how
+// many times admins re-upload. Configurable via env so it can be tuned per
+// deployment without a code change; defaults to 500MB.
+const DEFAULT_MAX_TOTAL_SUBAPP_STORAGE_BYTES = 500 * 1024 * 1024;
+const MAX_TOTAL_SUBAPP_STORAGE_BYTES = (() => {
+  const raw = process.env.SUBAPP_STORAGE_QUOTA_BYTES;
+  const parsed = raw ? Number(raw) : NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_TOTAL_SUBAPP_STORAGE_BYTES;
+})();
+
+function formatMB(bytes: number): string {
+  return (bytes / (1024 * 1024)).toFixed(1);
+}
 const ALLOWED_ARCHIVE_CONTENT_TYPES = new Set([
   "application/zip",
   "application/x-zip-compressed",
@@ -203,6 +224,18 @@ router.patch("/projects/reorder", requireRole("admin"), async (req, res): Promis
     .from(projectsTable)
     .orderBy(asc(projectsTable.sortOrder), desc(projectsTable.createdAt));
   res.json(ReorderProjectsResponse.parse(toPlain(projects)));
+});
+
+// Registered before "/projects/:projectId" so that literal path segment
+// takes precedence over the numeric id param during route matching.
+router.get("/projects/subapp-storage", requireRole("admin"), async (_req, res): Promise<void> => {
+  const usedBytes = await objectStorageService.getTotalSizeUnderPrefix(SUBAPP_STORAGE_ROOT_PREFIX);
+  res.json(
+    GetProjectSubappStorageUsageResponse.parse({
+      usedBytes,
+      quotaBytes: MAX_TOTAL_SUBAPP_STORAGE_BYTES,
+    }),
+  );
 });
 
 router.get("/projects/:projectId", async (req, res): Promise<void> => {
@@ -415,6 +448,27 @@ router.post("/projects/:projectId/subapp", requireRole("admin"), async (req, res
     }
   }
 
+  // Enforce a combined ceiling across every project's sub-app before extracting
+  // anything, so no single project (or repeated re-uploads to the same one) can
+  // gradually exhaust the shared object storage bucket. The previous bundle for
+  // *this* project (if any) is about to be replaced, so it's netted out of the
+  // current usage rather than counted twice.
+  const previousPrefix = project.subappObjectPrefix;
+  const [currentTotalUsage, previousPrefixSize] = await Promise.all([
+    objectStorageService.getTotalSizeUnderPrefix(SUBAPP_STORAGE_ROOT_PREFIX),
+    previousPrefix ? objectStorageService.getTotalSizeUnderPrefix(previousPrefix) : Promise.resolve(0),
+  ]);
+  const projectedTotalUsage = currentTotalUsage - previousPrefixSize + totalUncompressed;
+  if (projectedTotalUsage > MAX_TOTAL_SUBAPP_STORAGE_BYTES) {
+    res.status(400).json({
+      error:
+        `This upload would push total sub-app storage to ${formatMB(projectedTotalUsage)}MB, ` +
+        `over the ${formatMB(MAX_TOTAL_SUBAPP_STORAGE_BYTES)}MB shared quota. ` +
+        "Remove an existing sub-app or use a smaller archive.",
+    });
+    return;
+  }
+
   // If every entry shares one common top-level directory (typical of "zip this folder"),
   // strip it so the sub-app's index.html ends up at the prefix root.
   const topDirs = new Set(
@@ -453,8 +507,6 @@ router.post("/projects/:projectId/subapp", requireRole("admin"), async (req, res
     res.status(500).json({ error: "Failed to extract archive" });
     return;
   }
-
-  const previousPrefix = project.subappObjectPrefix;
 
   const [updated] = await db
     .update(projectsTable)

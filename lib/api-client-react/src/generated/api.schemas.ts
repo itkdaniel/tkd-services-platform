@@ -362,6 +362,13 @@ export interface ProjectReorderInput {
   ids: number[];
 }
 
+export interface ProjectSubappStorageUsage {
+  /** Total bytes currently used by extracted sub-app bundles across all projects. */
+  usedBytes: number;
+  /** Configured ceiling that new sub-app uploads are checked against. */
+  quotaBytes: number;
+}
+
 export interface ProjectSubappUploadInput {
   /** @minLength 1 */
   objectPath: string;

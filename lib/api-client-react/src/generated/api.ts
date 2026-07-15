@@ -51,6 +51,7 @@ import type {
   Project,
   ProjectCreateInput,
   ProjectReorderInput,
+  ProjectSubappStorageUsage,
   ProjectSubappUploadInput,
   ProjectUpdateInput,
   RegisterInput,
@@ -2775,6 +2776,88 @@ export const useDeleteProject = <TError = ErrorType<ErrorResponse>,
       > => {
       return useMutation(getDeleteProjectMutationOptions(options));
     }
+
+export const getGetProjectSubappStorageUsageUrl = () => {
+
+
+
+
+  return `/api/projects/subapp-storage`
+}
+
+/**
+ * Reports how many bytes of the shared object storage bucket are
+ * currently occupied by extracted sub-app bundles across all
+ * projects, and the configured ceiling that new uploads are checked
+ * against. Lets admins see how close the shared quota is before an
+ * upload gets rejected.
+ * @summary Current total sub-app storage usage against the configured quota (admin only)
+ */
+export const getProjectSubappStorageUsage = async ( options?: RequestInit): Promise<ProjectSubappStorageUsage> => {
+
+  return customFetch<ProjectSubappStorageUsage>(getGetProjectSubappStorageUsageUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetProjectSubappStorageUsageQueryKey = () => {
+    return [
+    `/api/projects/subapp-storage`
+    ] as const;
+    }
+
+
+export const getGetProjectSubappStorageUsageQueryOptions = <TData = Awaited<ReturnType<typeof getProjectSubappStorageUsage>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProjectSubappStorageUsage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetProjectSubappStorageUsageQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProjectSubappStorageUsage>>> = ({ signal }) => getProjectSubappStorageUsage({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getProjectSubappStorageUsage>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetProjectSubappStorageUsageQueryResult = NonNullable<Awaited<ReturnType<typeof getProjectSubappStorageUsage>>>
+export type GetProjectSubappStorageUsageQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Current total sub-app storage usage against the configured quota (admin only)
+ */
+
+export function useGetProjectSubappStorageUsage<TData = Awaited<ReturnType<typeof getProjectSubappStorageUsage>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProjectSubappStorageUsage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetProjectSubappStorageUsageQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getRegisterProjectSubappUrl = (projectId: number,) => {
 

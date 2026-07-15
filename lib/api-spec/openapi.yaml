@@ -1054,6 +1054,37 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /projects/subapp-storage:
+    get:
+      operationId: getProjectSubappStorageUsage
+      tags: [projects]
+      summary: Current total sub-app storage usage against the configured quota (admin only)
+      description: |
+        Reports how many bytes of the shared object storage bucket are
+        currently occupied by extracted sub-app bundles across all
+        projects, and the configured ceiling that new uploads are checked
+        against. Lets admins see how close the shared quota is before an
+        upload gets rejected.
+      responses:
+        "200":
+          description: Current usage and quota
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectSubappStorageUsage"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /projects/{projectId}/subapp:
     post:
       operationId: registerProjectSubapp
@@ -1921,6 +1952,17 @@ components:
           items:
             type: integer
           minItems: 1
+
+    ProjectSubappStorageUsage:
+      type: object
+      required: [usedBytes, quotaBytes]
+      properties:
+        usedBytes:
+          type: integer
+          description: Total bytes currently used by extracted sub-app bundles across all projects.
+        quotaBytes:
+          type: integer
+          description: Configured ceiling that new sub-app uploads are checked against.
 
     ProjectSubappUploadInput:
       type: object

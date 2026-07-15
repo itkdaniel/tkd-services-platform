@@ -785,6 +785,20 @@ export const DeleteProjectResponse = zod.void()
 
 
 /**
+ * Reports how many bytes of the shared object storage bucket are
+ * currently occupied by extracted sub-app bundles across all
+ * projects, and the configured ceiling that new uploads are checked
+ * against. Lets admins see how close the shared quota is before an
+ * upload gets rejected.
+ * @summary Current total sub-app storage usage against the configured quota (admin only)
+ */
+export const GetProjectSubappStorageUsageResponse = zod.object({
+  "usedBytes": zod.number().describe('Total bytes currently used by extracted sub-app bundles across all projects.'),
+  "quotaBytes": zod.number().describe('Configured ceiling that new sub-app uploads are checked against.')
+})
+
+
+/**
  * Called after a .zip archive has been uploaded directly to the
  * presigned URL from /storage/uploads/request-url. The server verifies
  * the upload was issued to the caller, downloads and validates the
