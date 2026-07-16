@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { Router, type IRouter } from "express";
 import { requireRole } from "../middlewares/auth";
+import { sendEmail } from "../lib/email";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -72,6 +74,134 @@ function readJson<T>(filePath: string): T | null {
     return JSON.parse(raw) as T;
   } catch {
     return null;
+  }
+}
+
+function writeJson(filePath: string, data: unknown): void {
+  try {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+  } catch (err) {
+    logger.warn({ err, filePath }, "Could not write notification state file");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Notification state — persisted to disk so transitions survive server
+// restarts without falsely re-alerting on the same ongoing failure.
+// Shape: { [serviceName]: { [featureName]: "passed" | "failed" | "unavailable" } }
+// ---------------------------------------------------------------------------
+
+type FeatureStatus = "passed" | "failed" | "unavailable";
+type NotificationState = Record<string, Record<string, FeatureStatus>>;
+
+const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL ?? "";
+
+function loadNotificationState(stateFilePath: string): NotificationState {
+  return readJson<NotificationState>(stateFilePath) ?? {};
+}
+
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/**
+ * Detects pass→fail transitions and sends a single admin email listing all
+ * newly-failing features. Returns the updated state that should be persisted.
+ *
+ * Runs fire-and-forget (called without await) so it never blocks the HTTP
+ * response — the dashboard stays responsive even if Gmail is slow.
+ */
+async function checkAndNotify(
+  currentServices: Array<{ service: string; available: boolean; features: Array<{ name: string; status: string }> }>,
+  prevState: NotificationState,
+  stateFilePath: string,
+): Promise<void> {
+  const newState: NotificationState = {};
+  const newlyFailing: Array<{ service: string; feature: string }> = [];
+
+  for (const svc of currentServices) {
+    newState[svc.service] = {};
+    const prevSvc = prevState[svc.service] ?? {};
+
+    if (!svc.available) {
+      // Service offline — record as unavailable, don't change previous feature
+      // statuses so a subsequent re-run that's still failing doesn't re-alert.
+      for (const [feat, prevStatus] of Object.entries(prevSvc)) {
+        newState[svc.service][feat] = prevStatus;
+      }
+      continue;
+    }
+
+    for (const feature of svc.features) {
+      const current: FeatureStatus = feature.status === "passed" ? "passed" : "failed";
+      newState[svc.service][feature.name] = current;
+
+      const prev = prevSvc[feature.name];
+      // Notify only when a feature that was previously passing is now failing.
+      // "undefined" (first ever poll) is treated as passing so a first red
+      // run does trigger an alert.
+      if (current === "failed" && (prev === "passed" || prev === undefined)) {
+        newlyFailing.push({ service: svc.service, feature: feature.name });
+      }
+    }
+  }
+
+  // Persist updated state regardless of whether we send email — this prevents
+  // duplicate alerts on the next poll.
+  writeJson(stateFilePath, newState);
+
+  if (newlyFailing.length === 0 || !ADMIN_EMAIL) {
+    if (newlyFailing.length > 0 && !ADMIN_EMAIL) {
+      logger.warn(
+        { newlyFailing },
+        "Test failures detected but ADMIN_NOTIFICATION_EMAIL is not set — skipping notification",
+      );
+    }
+    return;
+  }
+
+  // Build a tidy summary grouped by service.
+  const byService: Record<string, string[]> = {};
+  for (const { service, feature } of newlyFailing) {
+    (byService[service] ??= []).push(feature);
+  }
+
+  const textLines: string[] = ["One or more test suites have newly started failing:\n"];
+  const htmlRows: string[] = [];
+  for (const [svc, features] of Object.entries(byService)) {
+    textLines.push(`  ${svc}:`);
+    htmlRows.push(`<p><strong>${escapeHtml(svc)}</strong></p><ul>`);
+    for (const f of features) {
+      textLines.push(`    • ${f}`);
+      htmlRows.push(`  <li>${escapeHtml(f)}</li>`);
+    }
+    htmlRows.push(`</ul>`);
+  }
+  textLines.push("\nOpen the Test Status Dashboard for details.");
+
+  const subject =
+    newlyFailing.length === 1
+      ? `🔴 Test failure: ${newlyFailing[0].feature} (${newlyFailing[0].service})`
+      : `🔴 ${newlyFailing.length} test suites newly failing`;
+
+  const html =
+    `<h2>Newly failing test suites</h2>` +
+    htmlRows.join("\n") +
+    `<p>Open the <a href="/status-dashboard/">Test Status Dashboard</a> for details.</p>`;
+
+  const sent = await sendEmail({
+    to: ADMIN_EMAIL,
+    subject,
+    text: textLines.join("\n"),
+    html,
+  });
+
+  if (sent) {
+    logger.info({ newlyFailing }, "Test-failure notification email sent");
   }
 }
 
@@ -181,7 +311,20 @@ router.get("/dev/test-status", requireRole("admin"), (_req, res): void => {
     path.join(bookingServiceRoot, "coverage", "coverage-summary.json"),
   );
 
-  res.json({ services: [apiServer, bookingService] });
+  const services = [apiServer, bookingService];
+
+  // Send the response immediately — notification check runs in the background.
+  res.json({ services });
+
+  // Notification state lives alongside the api-server's own test results so
+  // it doesn't clutter the project root.
+  const stateFilePath = path.join(apiServerRoot, "test-results", "notification-state.json");
+  const prevState = loadNotificationState(stateFilePath);
+
+  // Fire-and-forget: dashboard is never blocked by email delivery.
+  checkAndNotify(services, prevState, stateFilePath).catch((err) => {
+    logger.error({ err }, "Unexpected error in test-failure notification check");
+  });
 });
 
 export default router;
