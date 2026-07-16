@@ -1,9 +1,17 @@
-import { describe, it, expect, afterAll, vi } from "vitest";
+import { describe, it, expect, afterAll, vi, beforeEach } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, objectUploadIntentsTable, resumeVersionsTable, projectsTable } from "@workspace/db";
 
 import { createUser, deleteUsersByIds, deleteResumeVersionsByIds, unique } from "../test/helpers";
-import { sweepOrphanedResumeUploads } from "./resumeUploadCleanup";
+import { sweepOrphanedResumeUploads, startResumeUploadCleanupJob, CLEANUP_FAILURE_ALERT_THRESHOLD, type SweepResult } from "./resumeUploadCleanup";
+import { sendAdminNotification } from "./adminNotify";
+
+// Mock the admin notification module so tests can assert alert calls without
+// requiring email credentials or a real transport.
+vi.mock("./adminNotify", () => ({
+  sendAdminNotification: vi.fn(async () => {}),
+  notifyAdminOfResumeUpload: vi.fn(async () => {}),
+}));
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -149,5 +157,80 @@ describe("sweepOrphanedResumeUploads", () => {
     expect(remaining).toBeDefined();
 
     await db.delete(objectUploadIntentsTable).where(eq(objectUploadIntentsTable.objectPath, objectPath));
+  });
+});
+
+describe("startResumeUploadCleanupJob — consecutive-failure alerting", () => {
+  const notifySpy = () => vi.mocked(sendAdminNotification);
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.mocked(sendAdminNotification).mockClear();
+  });
+
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
+  /**
+   * Advances the fake clock by `ticks` intervals, flushing async microtasks
+   * between each tick so sweep Promises settle before the next tick fires.
+   */
+  async function advanceTicks(intervalMs: number, ticks: number) {
+    for (let i = 0; i < ticks; i++) {
+      await vi.advanceTimersByTimeAsync(intervalMs);
+    }
+  }
+
+  it("does not send a notification when fewer than the threshold failures have occurred", async () => {
+    const failingSweep = vi.fn(async (): Promise<never> => {
+      throw new Error("storage unavailable");
+    });
+
+    // Total invocations = 1 (immediate) + (THRESHOLD-2) ticks = THRESHOLD-1 — stays under threshold.
+    const interval = startResumeUploadCleanupJob(100, failingSweep);
+    await advanceTicks(100, CLEANUP_FAILURE_ALERT_THRESHOLD - 2);
+    clearInterval(interval);
+
+    expect(notifySpy()).not.toHaveBeenCalled();
+  });
+
+  it("sends exactly one notification when the failure threshold is first crossed", async () => {
+    const failingSweep = vi.fn(async (): Promise<never> => {
+      throw new Error("DB connection lost");
+    });
+
+    // Total invocations = 1 (immediate) + (THRESHOLD + 1) ticks = THRESHOLD + 2,
+    // ensuring we cross and then exceed the threshold without resetting.
+    const interval = startResumeUploadCleanupJob(100, failingSweep);
+    await advanceTicks(100, CLEANUP_FAILURE_ALERT_THRESHOLD + 1);
+    clearInterval(interval);
+
+    // Alert fires exactly once — at the threshold, not on every subsequent failure.
+    expect(notifySpy()).toHaveBeenCalledTimes(1);
+    const [subject] = notifySpy().mock.calls[0]!;
+    expect(subject).toMatch(/cleanup sweep/i);
+  });
+
+  it("resets the streak on a successful sweep and re-alerts after a new streak", async () => {
+    let callCount = 0;
+    const controlledSweep = vi.fn(async (): Promise<SweepResult> => {
+      callCount++;
+      // First THRESHOLD calls fail
+      if (callCount <= CLEANUP_FAILURE_ALERT_THRESHOLD) throw new Error("first streak");
+      // One success — resets the consecutive-failure counter
+      if (callCount === CLEANUP_FAILURE_ALERT_THRESHOLD + 1) return { deletedObjects: 0, deletedIntents: 0 };
+      // Second streak fails again
+      throw new Error("second streak");
+    });
+
+    // Drive through: THRESHOLD failures + 1 success + THRESHOLD more failures.
+    // Total ticks after the immediate first call: THRESHOLD * 2
+    const interval = startResumeUploadCleanupJob(100, controlledSweep);
+    await advanceTicks(100, CLEANUP_FAILURE_ALERT_THRESHOLD * 2);
+    clearInterval(interval);
+
+    // One alert per streak that crosses the threshold
+    expect(notifySpy()).toHaveBeenCalledTimes(2);
   });
 });

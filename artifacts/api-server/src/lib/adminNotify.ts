@@ -6,6 +6,23 @@ import { logger } from "./logger";
 // than duplicated under a resume-specific name.
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL ?? "";
 
+/**
+ * Sends a generic admin notification email with a plain-text body.
+ * Failures are logged and swallowed — the caller must not crash because a
+ * notification email bounced.
+ */
+export async function sendAdminNotification(subject: string, body: string): Promise<void> {
+  if (!ADMIN_EMAIL) {
+    logger.warn("ADMIN_NOTIFICATION_EMAIL is not set, skipping admin notification");
+    return;
+  }
+
+  const escapedBody = escapeHtml(body);
+  const html = `<pre style="font-family:sans-serif;white-space:pre-wrap">${escapedBody}</pre>`;
+
+  await sendEmail({ to: ADMIN_EMAIL, subject, text: body, html });
+}
+
 function escapeHtml(input: string): string {
   return input
     .replace(/&/g, "&amp;")
