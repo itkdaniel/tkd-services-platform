@@ -1,8 +1,7 @@
 import { logger } from "../logger";
 import { config } from "../config";
-import { GmailAdapter } from "./gmailAdapter";
-import { SmtpAdapter } from "./smtpAdapter";
-import type { EmailAdapter, EmailMessage } from "./types";
+import { GmailAdapter, SmtpAdapter } from "@workspace/email";
+import type { EmailAdapter, EmailMessage } from "@workspace/email";
 
 export type { EmailAdapter, EmailMessage };
 
@@ -14,9 +13,16 @@ let adapter: EmailAdapter | null = null;
 function getAdapter(): EmailAdapter {
   if (adapter) return adapter;
   if (config.emailProvider === "smtp") {
-    adapter = new SmtpAdapter();
+    adapter = new SmtpAdapter({
+      host: config.smtp.host,
+      port: config.smtp.port,
+      secure: config.smtp.secure,
+      user: config.smtp.user,
+      pass: config.smtp.pass,
+      from: config.emailFrom || undefined,
+    });
   } else if (config.emailProvider === "gmail") {
-    adapter = new GmailAdapter();
+    adapter = new GmailAdapter({ from: config.emailFrom || undefined });
   } else {
     throw new Error(`Unknown EMAIL_PROVIDER "${config.emailProvider}" (expected "gmail" or "smtp")`);
   }

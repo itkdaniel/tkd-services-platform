@@ -1,6 +1,6 @@
 import { logger } from "../logger";
-import { GmailAdapter } from "./gmailAdapter";
-import type { EmailAdapter, EmailMessage } from "./types";
+import { GmailAdapter } from "@workspace/email";
+import type { EmailAdapter, EmailMessage } from "@workspace/email";
 
 export type { EmailAdapter, EmailMessage };
 

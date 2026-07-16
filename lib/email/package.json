@@ -1,0 +1,17 @@
+{
+  "name": "@workspace/email",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@replit/connectors-sdk": "latest",
+    "nodemailer": "^6.10.1"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/nodemailer": "^6.4.19"
+  }
+}

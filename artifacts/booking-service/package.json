@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@replit/connectors-sdk": "latest",
+    "@workspace/email": "workspace:*",
     "drizzle-orm": "catalog:",
     "express": "^5.2.1",
     "node-cron": "^3.0.3",
