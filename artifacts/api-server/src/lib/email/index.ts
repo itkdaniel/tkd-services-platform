@@ -1,5 +1,5 @@
 import { logger } from "../logger";
-import { GmailAdapter } from "@workspace/email";
+import { GmailAdapter, SmtpAdapter } from "@workspace/email";
 import type { EmailAdapter, EmailMessage } from "@workspace/email";
 
 export type { EmailAdapter, EmailMessage };
@@ -7,7 +7,26 @@ export type { EmailAdapter, EmailMessage };
 let adapter: EmailAdapter | null = null;
 
 function getAdapter(): EmailAdapter {
-  if (!adapter) adapter = new GmailAdapter();
+  if (adapter) return adapter;
+  const provider = (process.env.EMAIL_PROVIDER ?? "gmail").toLowerCase();
+  if (provider === "smtp") {
+    adapter = new SmtpAdapter({
+      host: process.env.SMTP_HOST ?? "",
+      port: parseInt(process.env.SMTP_PORT ?? "587", 10),
+      secure: process.env.SMTP_SECURE === "true",
+      user: process.env.SMTP_USER ?? "",
+      pass: process.env.SMTP_PASS ?? "",
+      from: process.env.EMAIL_FROM || undefined,
+    });
+  } else if (provider === "gmail") {
+    adapter = new GmailAdapter({
+      from: process.env.EMAIL_FROM || undefined,
+    });
+  } else {
+    throw new Error(
+      `Unknown EMAIL_PROVIDER "${provider}" (expected "gmail" or "smtp")`,
+    );
+  }
   return adapter;
 }
 
