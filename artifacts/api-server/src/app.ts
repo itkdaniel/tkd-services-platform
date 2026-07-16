@@ -10,6 +10,14 @@ import { attachUser } from "./middlewares/auth";
 
 const app: Express = express();
 
+// Trust exactly one proxy hop (Replit's reverse proxy).  This lets Express
+// set req.ip to the real client IP from the X-Forwarded-For header added by
+// the trusted proxy, while ignoring any XFF values injected further left by
+// the client itself.  Without this, all requests appear to come from the
+// proxy's loopback address; with it, a client cannot spoof req.ip by
+// prepending arbitrary IPs to the header.
+app.set("trust proxy", 1);
+
 if (!process.env.SESSION_SECRET) {
   throw new Error("SESSION_SECRET must be set. Did you forget to provision it?");
 }

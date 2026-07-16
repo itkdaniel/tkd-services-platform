@@ -11,6 +11,11 @@ import {
 } from "@workspace/api-zod";
 import { requireRole } from "../middlewares/auth";
 import { bookingRequest, BookingServiceError } from "../lib/bookingClient";
+import {
+  availabilityLimiter,
+  createAppointmentLimiter,
+  cancelAppointmentLimiter,
+} from "../middlewares/rateLimit";
 
 const router: IRouter = Router();
 
@@ -27,7 +32,7 @@ function handleBookingError(err: unknown, req: Request, res: Response): void {
 }
 
 // Public: anyone (guest or signed-in) can check availability.
-router.get("/booking/availability", async (req, res): Promise<void> => {
+router.get("/booking/availability", availabilityLimiter, async (req, res): Promise<void> => {
   const parsed = GetBookingAvailabilityQueryParams.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -46,7 +51,16 @@ router.get("/booking/availability", async (req, res): Promise<void> => {
 // Public: guests book with name/email only; signed-in users/admins get the
 // booking tied to their account by forwarding the current session's user
 // id/username as opaque external identifiers.
-router.post("/booking/appointments", async (req, res): Promise<void> => {
+router.post("/booking/appointments", createAppointmentLimiter, async (req, res): Promise<void> => {
+  // Honeypot: a hidden `website` field is included in the booking form but
+  // never filled in by real users.  If it arrives populated the request is
+  // almost certainly automated — silently fake a success so bots don't know
+  // they've been blocked.
+  if (req.body && typeof req.body === "object" && req.body.website) {
+    res.status(201).json({ honeypot: true });
+    return;
+  }
+
   const parsed = CreateBookingAppointmentBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -114,7 +128,7 @@ router.patch("/booking/notifications/:id/read", requireRole("admin"), async (req
 
 // Public: a booker cancels their own appointment by supplying their email address.
 // The booking service verifies the email matches the appointment's guest email.
-router.post("/booking/appointments/:id/cancel", async (req, res): Promise<void> => {
+router.post("/booking/appointments/:id/cancel", cancelAppointmentLimiter, async (req, res): Promise<void> => {
   const paramsParsed = CancelBookingAppointmentParams.safeParse(req.params);
   if (!paramsParsed.success) {
     res.status(400).json({ error: paramsParsed.error.message });

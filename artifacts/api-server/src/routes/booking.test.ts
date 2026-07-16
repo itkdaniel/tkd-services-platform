@@ -122,4 +122,39 @@ describe("booking proxy", () => {
     expect(res.status).toBe(200);
     expect(mockedBookingRequest).toHaveBeenCalledWith("PATCH", "/notifications/5/read");
   });
+
+  describe("honeypot bot filter", () => {
+    it("silently accepts (201) when the hidden website field is filled in, without forwarding to booking service", async () => {
+      const res = await agent()
+        .post("/api/booking/appointments")
+        .send({
+          title: "Consult",
+          name: "Bot",
+          email: "bot@example.com",
+          start: "2026-08-01T09:00:00.000Z",
+          website: "https://spam.example.com",
+        });
+      expect(res.status).toBe(201);
+      // The booking service must NOT have been called — this was a bot.
+      expect(mockedBookingRequest).not.toHaveBeenCalled();
+    });
+
+    it("does not trigger the honeypot when website field is absent", async () => {
+      mockedBookingRequest.mockResolvedValueOnce({ id: 10, status: "confirmed" });
+      const res = await agent()
+        .post("/api/booking/appointments")
+        .send({ title: "Consult", name: "Real User", email: "real@example.com", start: "2026-08-01T09:00:00.000Z" });
+      expect(res.status).toBe(201);
+      expect(mockedBookingRequest).toHaveBeenCalledOnce();
+    });
+
+    it("does not trigger the honeypot when website is an empty string", async () => {
+      mockedBookingRequest.mockResolvedValueOnce({ id: 11, status: "confirmed" });
+      const res = await agent()
+        .post("/api/booking/appointments")
+        .send({ title: "Consult", name: "Real User", email: "real@example.com", start: "2026-08-01T09:00:00.000Z", website: "" });
+      expect(res.status).toBe(201);
+      expect(mockedBookingRequest).toHaveBeenCalledOnce();
+    });
+  });
 });
