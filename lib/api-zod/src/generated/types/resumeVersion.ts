@@ -18,4 +18,9 @@ export interface ResumeVersion {
   uploaderId: number;
   uploaderUsername: string;
   createdAt: string;
+  /**
+     * Set when an admin first views the version history after this upload. Null means not yet reviewed.
+     * @nullable
+     */
+  reviewedAt: string | null;
 }

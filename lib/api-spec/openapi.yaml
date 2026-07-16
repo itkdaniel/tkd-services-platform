@@ -815,6 +815,34 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /resume/versions/mark-reviewed:
+    post:
+      operationId: markResumeVersionsReviewed
+      tags: [resume]
+      summary: Mark all unreviewed résumé versions as reviewed (admin only)
+      description: |
+        Sets reviewedAt = now() on every version that has not yet been reviewed.
+        Intended to be called when an admin opens the résumé history page.
+      responses:
+        "200":
+          description: Number of rows updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarkResumeVersionsReviewedResult"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /resume/versions/bulk-delete:
     post:
       operationId: bulkDeleteResumeVersions
@@ -1931,6 +1959,7 @@ components:
           uploaderId,
           uploaderUsername,
           createdAt,
+          reviewedAt,
         ]
       properties:
         id:
@@ -1953,6 +1982,9 @@ components:
           type: string
         createdAt:
           type: string
+        reviewedAt:
+          type: ["string", "null"]
+          description: Set when an admin first views the version history after this upload. Null means not yet reviewed.
 
     ResumeVersionUploadInput:
       type: object
@@ -2008,6 +2040,14 @@ components:
           type: array
           items:
             type: integer
+
+    MarkResumeVersionsReviewedResult:
+      type: object
+      required: [updatedCount]
+      properties:
+        updatedCount:
+          type: integer
+          description: Number of versions that were marked as reviewed.
 
     Project:
       type: object

@@ -46,6 +46,7 @@ export * from './healthStatus';
 export * from './listBookingAppointmentsParams';
 export * from './listBookingNotificationsParams';
 export * from './loginInput';
+export * from './markResumeVersionsReviewedResult';
 export * from './project';
 export * from './projectCreateInput';
 export * from './projectDemoType';

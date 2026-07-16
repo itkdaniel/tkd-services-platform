@@ -51,6 +51,7 @@ import type {
   ListBookingAppointmentsParams,
   ListBookingNotificationsParams,
   LoginInput,
+  MarkResumeVersionsReviewedResult,
   Project,
   ProjectCreateInput,
   ProjectReorderInput,
@@ -2260,6 +2261,79 @@ export const useUpdateResumeVersion = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getUpdateResumeVersionMutationOptions(options));
+    }
+
+export const getMarkResumeVersionsReviewedUrl = () => {
+
+
+
+
+  return `/api/resume/versions/mark-reviewed`
+}
+
+/**
+ * Sets reviewedAt = now() on every version that has not yet been reviewed.
+ * Intended to be called when an admin opens the résumé history page.
+ * @summary Mark all unreviewed résumé versions as reviewed (admin only)
+ */
+export const markResumeVersionsReviewed = async ( options?: RequestInit): Promise<MarkResumeVersionsReviewedResult> => {
+
+  return customFetch<MarkResumeVersionsReviewedResult>(getMarkResumeVersionsReviewedUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getMarkResumeVersionsReviewedMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markResumeVersionsReviewed>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markResumeVersionsReviewed>>, TError,void, TContext> => {
+
+const mutationKey = ['markResumeVersionsReviewed'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markResumeVersionsReviewed>>, void> = () => {
+
+
+          return  markResumeVersionsReviewed(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkResumeVersionsReviewedMutationResult = NonNullable<Awaited<ReturnType<typeof markResumeVersionsReviewed>>>
+
+    export type MarkResumeVersionsReviewedMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Mark all unreviewed résumé versions as reviewed (admin only)
+ */
+export const useMarkResumeVersionsReviewed = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markResumeVersionsReviewed>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markResumeVersionsReviewed>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getMarkResumeVersionsReviewedMutationOptions(options));
     }
 
 export const getBulkDeleteResumeVersionsUrl = () => {

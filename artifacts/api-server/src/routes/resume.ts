@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { desc, eq, inArray } from "drizzle-orm";
+import { desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db, resumeVersionsTable, objectUploadIntentsTable } from "@workspace/db";
 import {
   CreateResumeVersionBody,
@@ -11,6 +11,7 @@ import {
   UpdateResumeVersionResponse,
   BulkDeleteResumeVersionsBody,
   BulkDeleteResumeVersionsResponse,
+  MarkResumeVersionsReviewedResponse,
 } from "@workspace/api-zod";
 import { requireRole } from "../middlewares/auth";
 import { toPlain } from "../lib/serialize";
@@ -195,6 +196,16 @@ router.patch("/resume/versions/:versionId", requireRole("admin"), async (req, re
   }
 
   res.json(UpdateResumeVersionResponse.parse(toPlain(updated)));
+});
+
+router.post("/resume/versions/mark-reviewed", requireRole("admin"), async (_req, res): Promise<void> => {
+  const result = await db
+    .update(resumeVersionsTable)
+    .set({ reviewedAt: sql`now()` })
+    .where(isNull(resumeVersionsTable.reviewedAt))
+    .returning({ id: resumeVersionsTable.id });
+
+  res.json(MarkResumeVersionsReviewedResponse.parse({ updatedCount: result.length }));
 });
 
 router.post("/resume/versions/bulk-delete", requireRole("user", "admin"), async (req, res): Promise<void> => {

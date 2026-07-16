@@ -270,6 +270,11 @@ export interface ResumeVersion {
   uploaderId: number;
   uploaderUsername: string;
   createdAt: string;
+  /**
+     * Set when an admin first views the version history after this upload. Null means not yet reviewed.
+     * @nullable
+     */
+  reviewedAt: string | null;
 }
 
 export interface ResumeVersionUploadInput {
@@ -300,6 +305,11 @@ export interface ResumeVersionIdsInput {
 
 export interface ResumeVersionsDeletedEnvelope {
   deletedIds: number[];
+}
+
+export interface MarkResumeVersionsReviewedResult {
+  /** Number of versions that were marked as reviewed. */
+  updatedCount: number;
 }
 
 export type ProjectDemoType = typeof ProjectDemoType[keyof typeof ProjectDemoType];

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetCurrentSession,
@@ -6,6 +6,7 @@ import {
   useListResumeVersions,
   useUpdateResumeVersion,
   useBulkDeleteResumeVersions,
+  useMarkResumeVersionsReviewed,
   getGetCurrentResumeQueryKey,
   getListResumeVersionsQueryKey,
 } from "@workspace/api-client-react";
@@ -58,6 +59,23 @@ export default function ResumePage() {
     queryClient.invalidateQueries({ queryKey: getGetCurrentResumeQueryKey() });
     queryClient.invalidateQueries({ queryKey: getListResumeVersionsQueryKey() });
   }, [queryClient]);
+
+  const markReviewed = useMarkResumeVersionsReviewed();
+
+  // When an admin opens the page, mark all unreviewed uploads as reviewed and
+  // then refresh the list so the "New" badges disappear.
+  useEffect(() => {
+    if (!isAdmin) return;
+    markReviewed.mutate(undefined, {
+      onSuccess: (result) => {
+        if (result.updatedCount > 0) {
+          queryClient.invalidateQueries({ queryKey: getListResumeVersionsQueryKey() });
+        }
+      },
+    });
+    // We intentionally run this only once when the admin lands on the page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin]);
 
   const { upload, isUploading, progress, error: uploadError } = useResumeUpload(() => {
     invalidateAll();
@@ -322,6 +340,9 @@ export default function ResumePage() {
                           <Badge className="gap-1">
                             <Star className="w-3 h-3" /> Current
                           </Badge>
+                        )}
+                        {isAdmin && !v.reviewedAt && (
+                          <Badge variant="destructive" className="text-xs">New</Badge>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">

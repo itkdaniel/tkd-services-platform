@@ -515,7 +515,8 @@ export const GetCurrentResumeResponse = zod.object({
   "isCurrent": zod.boolean(),
   "uploaderId": zod.number(),
   "uploaderUsername": zod.string(),
-  "createdAt": zod.string()
+  "createdAt": zod.string(),
+  "reviewedAt": zod.string().nullable().describe('Set when an admin first views the version history after this upload. Null means not yet reviewed.')
 }),zod.null()])
 })
 
@@ -534,7 +535,8 @@ export const ListResumeVersionsResponseItem = zod.object({
   "isCurrent": zod.boolean(),
   "uploaderId": zod.number(),
   "uploaderUsername": zod.string(),
-  "createdAt": zod.string()
+  "createdAt": zod.string(),
+  "reviewedAt": zod.string().nullable().describe('Set when an admin first views the version history after this upload. Null means not yet reviewed.')
 })
 export const ListResumeVersionsResponse = zod.array(ListResumeVersionsResponseItem)
 
@@ -570,7 +572,8 @@ export const CreateResumeVersionResponse = zod.object({
   "isCurrent": zod.boolean(),
   "uploaderId": zod.number(),
   "uploaderUsername": zod.string(),
-  "createdAt": zod.string()
+  "createdAt": zod.string(),
+  "reviewedAt": zod.string().nullable().describe('Set when an admin first views the version history after this upload. Null means not yet reviewed.')
 })
 
 
@@ -596,7 +599,18 @@ export const UpdateResumeVersionResponse = zod.object({
   "isCurrent": zod.boolean(),
   "uploaderId": zod.number(),
   "uploaderUsername": zod.string(),
-  "createdAt": zod.string()
+  "createdAt": zod.string(),
+  "reviewedAt": zod.string().nullable().describe('Set when an admin first views the version history after this upload. Null means not yet reviewed.')
+})
+
+
+/**
+ * Sets reviewedAt = now() on every version that has not yet been reviewed.
+ * Intended to be called when an admin opens the résumé history page.
+ * @summary Mark all unreviewed résumé versions as reviewed (admin only)
+ */
+export const MarkResumeVersionsReviewedResponse = zod.object({
+  "updatedCount": zod.number().describe('Number of versions that were marked as reviewed.')
 })
 
 
