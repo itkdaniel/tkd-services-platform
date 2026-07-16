@@ -634,7 +634,7 @@ export const ListProjectsResponseItem = zod.object({
   "demoUrl": zod.string().nullable(),
   "subappObjectPrefix": zod.string().nullable(),
   "subappEntrypoint": zod.string().nullable(),
-  "tags": zod.array(zod.string()),
+  "tags": zod.array(zod.string()).describe('Free-form tags for filtering (e.g. \"React\", \"backend\").'),
   "sortOrder": zod.number(),
   "ownerId": zod.number(),
   "ownerUsername": zod.string(),
@@ -657,7 +657,7 @@ export const CreateProjectBody = zod.object({
   "thumbnailObjectPath": zod.string().optional(),
   "githubUrl": zod.string().optional(),
   "demoUrl": zod.string().optional(),
-  "tags": zod.array(zod.string()).optional()
+  "tags": zod.array(zod.string()).optional().describe('Free-form tags for filtering.')
 })
 
 export const CreateProjectResponse = zod.object({
@@ -671,7 +671,7 @@ export const CreateProjectResponse = zod.object({
   "demoUrl": zod.string().nullable(),
   "subappObjectPrefix": zod.string().nullable(),
   "subappEntrypoint": zod.string().nullable(),
-  "tags": zod.array(zod.string()),
+  "tags": zod.array(zod.string()).describe('Free-form tags for filtering (e.g. \"React\", \"backend\").'),
   "sortOrder": zod.number(),
   "ownerId": zod.number(),
   "ownerUsername": zod.string(),
@@ -703,7 +703,7 @@ export const ReorderProjectsResponseItem = zod.object({
   "demoUrl": zod.string().nullable(),
   "subappObjectPrefix": zod.string().nullable(),
   "subappEntrypoint": zod.string().nullable(),
-  "tags": zod.array(zod.string()),
+  "tags": zod.array(zod.string()).describe('Free-form tags for filtering (e.g. \"React\", \"backend\").'),
   "sortOrder": zod.number(),
   "ownerId": zod.number(),
   "ownerUsername": zod.string(),
@@ -732,7 +732,7 @@ export const GetProjectResponse = zod.object({
   "demoUrl": zod.string().nullable(),
   "subappObjectPrefix": zod.string().nullable(),
   "subappEntrypoint": zod.string().nullable(),
-  "tags": zod.array(zod.string()),
+  "tags": zod.array(zod.string()).describe('Free-form tags for filtering (e.g. \"React\", \"backend\").'),
   "sortOrder": zod.number(),
   "ownerId": zod.number(),
   "ownerUsername": zod.string(),
@@ -758,7 +758,7 @@ export const UpdateProjectBody = zod.object({
   "thumbnailObjectPath": zod.string().nullish(),
   "githubUrl": zod.string().nullish(),
   "demoUrl": zod.string().nullish(),
-  "tags": zod.array(zod.string()).optional()
+  "tags": zod.array(zod.string()).optional().describe('Free-form tags for filtering.')
 })
 
 export const UpdateProjectResponse = zod.object({
@@ -772,7 +772,7 @@ export const UpdateProjectResponse = zod.object({
   "demoUrl": zod.string().nullable(),
   "subappObjectPrefix": zod.string().nullable(),
   "subappEntrypoint": zod.string().nullable(),
-  "tags": zod.array(zod.string()),
+  "tags": zod.array(zod.string()).describe('Free-form tags for filtering (e.g. \"React\", \"backend\").'),
   "sortOrder": zod.number(),
   "ownerId": zod.number(),
   "ownerUsername": zod.string(),
@@ -843,7 +843,7 @@ export const RegisterProjectSubappResponse = zod.object({
   "demoUrl": zod.string().nullable(),
   "subappObjectPrefix": zod.string().nullable(),
   "subappEntrypoint": zod.string().nullable(),
-  "tags": zod.array(zod.string()),
+  "tags": zod.array(zod.string()).describe('Free-form tags for filtering (e.g. \"React\", \"backend\").'),
   "sortOrder": zod.number(),
   "ownerId": zod.number(),
   "ownerUsername": zod.string(),
@@ -870,7 +870,7 @@ export const RemoveProjectSubappResponse = zod.object({
   "demoUrl": zod.string().nullable(),
   "subappObjectPrefix": zod.string().nullable(),
   "subappEntrypoint": zod.string().nullable(),
-  "tags": zod.array(zod.string()),
+  "tags": zod.array(zod.string()).describe('Free-form tags for filtering (e.g. \"React\", \"backend\").'),
   "sortOrder": zod.number(),
   "ownerId": zod.number(),
   "ownerUsername": zod.string(),
@@ -990,6 +990,58 @@ export const CreateBookingAppointmentResponse = zod.object({
 
 
 /**
+ * @summary Cancel an appointment by supplying the guest email (self-service)
+ */
+export const CancelBookingAppointmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const cancelBookingAppointmentBodyEmailMin = 3;
+
+
+
+export const CancelBookingAppointmentBody = zod.object({
+  "email": zod.string().min(cancelBookingAppointmentBodyEmailMin)
+})
+
+export const CancelBookingAppointmentResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "reason": zod.string().nullable(),
+  "guestName": zod.string(),
+  "guestEmail": zod.string(),
+  "externalUserId": zod.string().nullable(),
+  "externalUserLabel": zod.string().nullable(),
+  "start": zod.string(),
+  "end": zod.string(),
+  "status": zod.enum(['confirmed', 'cancelled']),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Cancel any appointment (admin only, no email verification required)
+ */
+export const DeleteBookingAppointmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteBookingAppointmentResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "reason": zod.string().nullable(),
+  "guestName": zod.string(),
+  "guestEmail": zod.string(),
+  "externalUserId": zod.string().nullable(),
+  "externalUserLabel": zod.string().nullable(),
+  "start": zod.string(),
+  "end": zod.string(),
+  "status": zod.enum(['confirmed', 'cancelled']),
+  "createdAt": zod.string()
+})
+
+
+/**
  * @summary List booking inbox notifications (admin only)
  */
 export const ListBookingNotificationsQueryParams = zod.object({
@@ -1011,6 +1063,56 @@ export const ListBookingNotificationsResponse = zod.array(ListBookingNotificatio
 
 
 /**
+ * @summary Get current booking schedule settings (admin only)
+ */
+export const GetBookingSettingsResponse = zod.object({
+  "businessDays": zod.array(zod.number()).describe('Days of the week (0=Sun … 6=Sat) on which bookings are accepted.'),
+  "businessStartHour": zod.number().describe('Hour (0–23) when the business day opens.'),
+  "businessEndHour": zod.number().describe('Hour (1–24) when the business day closes.'),
+  "slotDurationMinutes": zod.number().describe('Length of each bookable slot in minutes.'),
+  "maxBookingHorizonDays": zod.number().describe('How many days ahead a guest may book.'),
+  "businessUtcOffsetMinutes": zod.number().describe('Fixed UTC offset in minutes applied to business-hours windows.')
+})
+
+
+/**
+ * @summary Update booking schedule settings (admin only)
+ */
+export const updateBookingSettingsBodyBusinessDaysItemMin = 0;
+export const updateBookingSettingsBodyBusinessDaysItemMax = 6;
+
+
+export const updateBookingSettingsBodyBusinessStartHourMin = 0;
+export const updateBookingSettingsBodyBusinessStartHourMax = 23;
+
+export const updateBookingSettingsBodyBusinessEndHourMax = 24;
+
+export const updateBookingSettingsBodySlotDurationMinutesMin = 5;
+export const updateBookingSettingsBodySlotDurationMinutesMax = 480;
+
+export const updateBookingSettingsBodyMaxBookingHorizonDaysMax = 365;
+
+
+
+export const UpdateBookingSettingsBody = zod.object({
+  "businessDays": zod.array(zod.number().min(updateBookingSettingsBodyBusinessDaysItemMin).max(updateBookingSettingsBodyBusinessDaysItemMax)).min(1).describe('Days of the week (0=Sun … 6=Sat) on which bookings are accepted.'),
+  "businessStartHour": zod.number().min(updateBookingSettingsBodyBusinessStartHourMin).max(updateBookingSettingsBodyBusinessStartHourMax).describe('Hour (0–23) when the business day opens.'),
+  "businessEndHour": zod.number().min(1).max(updateBookingSettingsBodyBusinessEndHourMax).describe('Hour (1–24) when the business day closes.'),
+  "slotDurationMinutes": zod.number().min(updateBookingSettingsBodySlotDurationMinutesMin).max(updateBookingSettingsBodySlotDurationMinutesMax).describe('Length of each bookable slot in minutes.'),
+  "maxBookingHorizonDays": zod.number().min(1).max(updateBookingSettingsBodyMaxBookingHorizonDaysMax).describe('How many days ahead a guest may book.')
+})
+
+export const UpdateBookingSettingsResponse = zod.object({
+  "businessDays": zod.array(zod.number()).describe('Days of the week (0=Sun … 6=Sat) on which bookings are accepted.'),
+  "businessStartHour": zod.number().describe('Hour (0–23) when the business day opens.'),
+  "businessEndHour": zod.number().describe('Hour (1–24) when the business day closes.'),
+  "slotDurationMinutes": zod.number().describe('Length of each bookable slot in minutes.'),
+  "maxBookingHorizonDays": zod.number().describe('How many days ahead a guest may book.'),
+  "businessUtcOffsetMinutes": zod.number().describe('Fixed UTC offset in minutes applied to business-hours windows.')
+})
+
+
+/**
  * @summary Mark a booking inbox notification as read (admin only)
  */
 export const MarkBookingNotificationReadParams = zod.object({
@@ -1026,54 +1128,6 @@ export const MarkBookingNotificationReadResponse = zod.object({
   "message": zod.string(),
   "emailSent": zod.boolean(),
   "read": zod.boolean(),
-  "createdAt": zod.string()
-})
-
-
-/**
- * @summary Cancel a booking appointment (guest self-service, verified by email)
- */
-export const CancelBookingAppointmentParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const CancelBookingAppointmentBody = zod.object({
-  "email": zod.string().email()
-})
-
-export const CancelBookingAppointmentResponse = zod.object({
-  "id": zod.number(),
-  "title": zod.string(),
-  "reason": zod.string().nullable(),
-  "guestName": zod.string(),
-  "guestEmail": zod.string(),
-  "externalUserId": zod.string().nullable(),
-  "externalUserLabel": zod.string().nullable(),
-  "start": zod.string(),
-  "end": zod.string(),
-  "status": zod.enum(['confirmed', 'cancelled']),
-  "createdAt": zod.string()
-})
-
-
-/**
- * @summary Cancel a booking appointment (admin only, no email verification required)
- */
-export const DeleteBookingAppointmentParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const DeleteBookingAppointmentResponse = zod.object({
-  "id": zod.number(),
-  "title": zod.string(),
-  "reason": zod.string().nullable(),
-  "guestName": zod.string(),
-  "guestEmail": zod.string(),
-  "externalUserId": zod.string().nullable(),
-  "externalUserLabel": zod.string().nullable(),
-  "start": zod.string(),
-  "end": zod.string(),
-  "status": zod.enum(['confirmed', 'cancelled']),
   "createdAt": zod.string()
 })
 

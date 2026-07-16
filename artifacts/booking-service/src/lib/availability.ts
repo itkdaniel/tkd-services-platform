@@ -1,7 +1,7 @@
 import { and, eq, gte, lt, ne } from "drizzle-orm";
 import { db } from "../db";
 import { appointmentsTable } from "../db/schema";
-import { config } from "./config";
+import { getBookingSettings } from "./settingsStore";
 
 export interface Slot {
   start: string; // ISO
@@ -17,7 +17,8 @@ export interface Slot {
  * gaps rather than every hour of every day.
  */
 export async function getAvailability(from: Date, to: Date): Promise<Slot[]> {
-  const slots = generateBusinessSlots(from, to);
+  const settings = await getBookingSettings();
+  const slots = generateBusinessSlots(from, to, settings);
   if (slots.length === 0) return [];
 
   const booked = await db
@@ -41,10 +42,22 @@ export async function getAvailability(from: Date, to: Date): Promise<Slot[]> {
   }));
 }
 
-function generateBusinessSlots(from: Date, to: Date): { start: Date; end: Date }[] {
+interface BusinessSettings {
+  businessUtcOffsetMinutes: number;
+  slotDurationMinutes: number;
+  businessDays: number[];
+  businessStartMinutes: number;
+  businessEndMinutes: number;
+}
+
+function generateBusinessSlots(
+  from: Date,
+  to: Date,
+  settings: BusinessSettings,
+): { start: Date; end: Date }[] {
   const slots: { start: Date; end: Date }[] = [];
-  const offsetMs = config.businessUtcOffsetMinutes * 60_000;
-  const slotMs = config.slotDurationMinutes * 60_000;
+  const offsetMs = settings.businessUtcOffsetMinutes * 60_000;
+  const slotMs = settings.slotDurationMinutes * 60_000;
 
   // Walk day by day (in the business's local time, expressed as a fixed UTC
   // offset) from the start of `from`'s local day through `to`.
@@ -58,11 +71,11 @@ function generateBusinessSlots(from: Date, to: Date): { start: Date; end: Date }
     if (dayStartLocal - offsetMs >= to.getTime()) break;
 
     const weekday = cursorDay.getUTCDay();
-    if (config.businessDays.includes(weekday)) {
+    if (settings.businessDays.includes(weekday)) {
       for (
-        let minutes = config.businessStartMinutes;
-        minutes + config.slotDurationMinutes <= config.businessEndMinutes;
-        minutes += config.slotDurationMinutes
+        let minutes = settings.businessStartMinutes;
+        minutes + settings.slotDurationMinutes <= settings.businessEndMinutes;
+        minutes += settings.slotDurationMinutes
       ) {
         const slotStartLocal = dayStartLocal + minutes * 60_000;
         const slotStartUtc = new Date(slotStartLocal - offsetMs);
@@ -84,7 +97,8 @@ export async function isSlotBookable(start: Date, end: Date): Promise<boolean> {
   const now = new Date();
   if (start.getTime() <= now.getTime()) return false;
 
-  const slots = generateBusinessSlots(start, new Date(start.getTime() + 1000));
+  const settings = await getBookingSettings();
+  const slots = generateBusinessSlots(start, new Date(start.getTime() + 1000), settings);
   const matches = slots.some(
     (s) => s.start.getTime() === start.getTime() && s.end.getTime() === end.getTime(),
   );

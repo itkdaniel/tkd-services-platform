@@ -1319,6 +1319,98 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /booking/appointments/{id}/cancel:
+    post:
+      operationId: cancelBookingAppointment
+      tags: [booking]
+      summary: Cancel an appointment by supplying the guest email (self-service)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingCancelInput"
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingAppointment"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Email does not match
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Already cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /booking/appointments/{id}:
+    delete:
+      operationId: deleteBookingAppointment
+      tags: [booking]
+      summary: Cancel any appointment (admin only, no email verification required)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingAppointment"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Already cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /booking/notifications:
     get:
       operationId: listBookingNotifications
@@ -1339,6 +1431,66 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/BookingNotification"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /booking/settings:
+    get:
+      operationId: getBookingSettings
+      tags: [booking]
+      summary: Get current booking schedule settings (admin only)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingSettings"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateBookingSettings
+      tags: [booking]
+      summary: Update booking schedule settings (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingSettingsInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingSettings"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Not authenticated
           content:
@@ -1996,6 +2148,87 @@ components:
         sizeBytes:
           type: integer
           minimum: 1
+
+    BookingSettings:
+      type: object
+      required:
+        [
+          businessDays,
+          businessStartHour,
+          businessEndHour,
+          slotDurationMinutes,
+          maxBookingHorizonDays,
+          businessUtcOffsetMinutes,
+        ]
+      properties:
+        businessDays:
+          type: array
+          items:
+            type: integer
+          description: "Days of the week (0=Sun … 6=Sat) on which bookings are accepted."
+        businessStartHour:
+          type: integer
+          description: "Hour (0–23) when the business day opens."
+        businessEndHour:
+          type: integer
+          description: "Hour (1–24) when the business day closes."
+        slotDurationMinutes:
+          type: integer
+          description: "Length of each bookable slot in minutes."
+        maxBookingHorizonDays:
+          type: integer
+          description: "How many days ahead a guest may book."
+        businessUtcOffsetMinutes:
+          type: integer
+          description: "Fixed UTC offset in minutes applied to business-hours windows."
+
+    BookingSettingsInput:
+      type: object
+      required:
+        [
+          businessDays,
+          businessStartHour,
+          businessEndHour,
+          slotDurationMinutes,
+          maxBookingHorizonDays,
+        ]
+      properties:
+        businessDays:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 6
+          minItems: 1
+          description: "Days of the week (0=Sun … 6=Sat) on which bookings are accepted."
+        businessStartHour:
+          type: integer
+          minimum: 0
+          maximum: 23
+          description: "Hour (0–23) when the business day opens."
+        businessEndHour:
+          type: integer
+          minimum: 1
+          maximum: 24
+          description: "Hour (1–24) when the business day closes."
+        slotDurationMinutes:
+          type: integer
+          minimum: 5
+          maximum: 480
+          description: "Length of each bookable slot in minutes."
+        maxBookingHorizonDays:
+          type: integer
+          minimum: 1
+          maximum: 365
+          description: "How many days ahead a guest may book."
+
+    BookingCancelInput:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          minLength: 3
 
     BookingSlot:
       type: object

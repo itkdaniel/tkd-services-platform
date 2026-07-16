@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { z } from "zod";
 import { getAvailability } from "../lib/availability";
-import { config } from "../lib/config";
+import { getBookingSettings } from "../lib/settingsStore";
 
 const router: IRouter = Router();
 
@@ -21,9 +21,10 @@ router.get("/availability", async (req, res): Promise<void> => {
     res.status(400).json({ error: "`to` must be after `from`" });
     return;
   }
-  const maxRangeMs = config.maxBookingHorizonDays * 24 * 60 * 60 * 1000;
+  const settings = await getBookingSettings();
+  const maxRangeMs = settings.maxBookingHorizonDays * 24 * 60 * 60 * 1000;
   if (to.getTime() - from.getTime() > maxRangeMs) {
-    res.status(400).json({ error: `Range too large; max ${config.maxBookingHorizonDays} days` });
+    res.status(400).json({ error: `Range too large; max ${settings.maxBookingHorizonDays} days` });
     return;
   }
 

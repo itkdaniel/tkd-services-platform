@@ -30,7 +30,7 @@ function apiKey(): string {
 }
 
 export async function bookingRequest<T>(
-  method: "GET" | "POST" | "PATCH",
+  method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE",
   path: string,
   options: { query?: Record<string, string | undefined>; body?: unknown } = {},
 ): Promise<T> {

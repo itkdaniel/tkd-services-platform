@@ -73,3 +73,19 @@ export const notificationsTable = pgTable("booking_notifications", {
 
 export type BookingNotification = typeof notificationsTable.$inferSelect;
 export type InsertBookingNotification = typeof notificationsTable.$inferInsert;
+
+// Singleton row (always id=1) that overrides env-var defaults for booking
+// hours, slot length, and horizon. Created on first admin write; if absent
+// the service falls back to the env-var driven `config` values.
+export const settingsTable = pgTable("booking_settings", {
+  id: integer("id").primaryKey().default(1),
+  businessDays: text("business_days").notNull().default("1,2,3,4,5"),
+  businessStartHour: integer("business_start_hour").notNull().default(9),
+  businessEndHour: integer("business_end_hour").notNull().default(17),
+  slotDurationMinutes: integer("slot_duration_minutes").notNull().default(30),
+  maxBookingHorizonDays: integer("max_booking_horizon_days").notNull().default(60),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type BookingSettings = typeof settingsTable.$inferSelect;
+export type InsertBookingSettings = typeof settingsTable.$inferInsert;

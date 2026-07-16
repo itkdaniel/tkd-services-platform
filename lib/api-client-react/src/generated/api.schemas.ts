@@ -386,6 +386,60 @@ export interface ProjectSubappUploadInput {
   sizeBytes: number;
 }
 
+export interface BookingSettings {
+  /** Days of the week (0=Sun … 6=Sat) on which bookings are accepted. */
+  businessDays: number[];
+  /** Hour (0–23) when the business day opens. */
+  businessStartHour: number;
+  /** Hour (1–24) when the business day closes. */
+  businessEndHour: number;
+  /** Length of each bookable slot in minutes. */
+  slotDurationMinutes: number;
+  /** How many days ahead a guest may book. */
+  maxBookingHorizonDays: number;
+  /** Fixed UTC offset in minutes applied to business-hours windows. */
+  businessUtcOffsetMinutes: number;
+}
+
+export interface BookingSettingsInput {
+  /**
+     * Days of the week (0=Sun … 6=Sat) on which bookings are accepted.
+     * @minItems 1
+     * @items.minimum 0
+     * @items.maximum 6
+     */
+  businessDays: number[];
+  /**
+     * Hour (0–23) when the business day opens.
+     * @minimum 0
+     * @maximum 23
+     */
+  businessStartHour: number;
+  /**
+     * Hour (1–24) when the business day closes.
+     * @minimum 1
+     * @maximum 24
+     */
+  businessEndHour: number;
+  /**
+     * Length of each bookable slot in minutes.
+     * @minimum 5
+     * @maximum 480
+     */
+  slotDurationMinutes: number;
+  /**
+     * How many days ahead a guest may book.
+     * @minimum 1
+     * @maximum 365
+     */
+  maxBookingHorizonDays: number;
+}
+
+export interface BookingCancelInput {
+  /** @minLength 3 */
+  email: string;
+}
+
 export interface BookingSlot {
   start: string;
   end: string;
@@ -470,10 +524,6 @@ export type GetBookingAvailabilityParams = {
 from: string;
 to: string;
 };
-
-export interface CancelBookingAppointmentInput {
-  email: string;
-}
 
 export type ListBookingAppointmentsParams = {
 upcomingOnly?: boolean;

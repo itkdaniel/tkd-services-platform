@@ -7,6 +7,7 @@ import {
   CancelBookingAppointmentParams,
   CancelBookingAppointmentBody,
   DeleteBookingAppointmentParams,
+  UpdateBookingSettingsBody,
 } from "@workspace/api-zod";
 import { requireRole } from "../middlewares/auth";
 import { bookingRequest, BookingServiceError } from "../lib/bookingClient";
@@ -130,6 +131,31 @@ router.post("/booking/appointments/:id/cancel", async (req, res): Promise<void> 
       `/appointments/${encodeURIComponent(String(paramsParsed.data.id))}/cancel`,
       { body: { email: bodyParsed.data.email } },
     );
+    res.json(data);
+  } catch (err) {
+    handleBookingError(err, req, res);
+  }
+});
+
+// Admin only: get current booking schedule settings.
+router.get("/booking/settings", requireRole("admin"), async (req, res): Promise<void> => {
+  try {
+    const data = await bookingRequest("GET", "/admin/booking-settings");
+    res.json(data);
+  } catch (err) {
+    handleBookingError(err, req, res);
+  }
+});
+
+// Admin only: update booking schedule settings.
+router.put("/booking/settings", requireRole("admin"), async (req, res): Promise<void> => {
+  const parsed = UpdateBookingSettingsBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  try {
+    const data = await bookingRequest("PUT", "/admin/booking-settings", { body: parsed.data });
     res.json(data);
   } catch (err) {
     handleBookingError(err, req, res);

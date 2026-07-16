@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "../db";
 import { appointmentsTable } from "../db/schema";
 import { isSlotBookable } from "../lib/availability";
-import { config } from "../lib/config";
+import { getBookingSettings } from "../lib/settingsStore";
 import { notify, notifyCancellation } from "../lib/notify";
 import { logger } from "../lib/logger";
 
@@ -27,7 +27,8 @@ router.post("/appointments", async (req, res): Promise<void> => {
     return;
   }
   const { title, reason, name, email, start, externalUserId, externalUserLabel } = parsed.data;
-  const end = new Date(start.getTime() + config.slotDurationMinutes * 60_000);
+  const settings = await getBookingSettings();
+  const end = new Date(start.getTime() + settings.slotDurationMinutes * 60_000);
 
   const bookable = await isSlotBookable(start, end);
   if (!bookable) {
