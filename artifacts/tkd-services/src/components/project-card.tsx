@@ -4,6 +4,56 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Github, PlayCircle, Pencil, Trash2, Boxes, GripVertical } from "lucide-react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+/** Drag-handle-only sortable card — works on mouse and touch. */
+export function SortableProjectCard(props: Omit<ProjectCardProps, "dragHandleProps">) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: props.project.id,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <ProjectCard
+        {...props}
+        isDragging={isDragging}
+        dragHandleProps={{ ...attributes, ...listeners }}
+      />
+    </div>
+  );
+}
+
+type DragHandleProps = React.HTMLAttributes<HTMLElement> & {
+  "aria-describedby"?: string;
+  "aria-disabled"?: boolean | "false" | "true";
+  "aria-pressed"?: boolean | "false" | "true" | "mixed";
+  "aria-roledescription"?: string;
+  role?: string;
+  tabIndex?: number;
+};
+
+interface ProjectCardProps {
+  project: Project;
+  isAdmin: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  /** When true, renders a drag handle. Admin only. */
+  reorderable?: boolean;
+  isDragging?: boolean;
+  isDropTarget?: boolean;
+  /** Props to spread onto the drag handle element (from dnd-kit useSortable). */
+  dragHandleProps?: DragHandleProps;
+  /** The currently active tag filter, if any. */
+  activeTag?: string | null;
+  /** Called when a tag badge is clicked. */
+  onTagClick?: (tag: string) => void;
+}
 
 export function ProjectCard({
   project,
@@ -13,30 +63,10 @@ export function ProjectCard({
   reorderable,
   isDragging,
   isDropTarget,
-  onDragStart,
-  onDragEnter,
-  onDragEnd,
-  onDrop,
+  dragHandleProps,
   activeTag,
   onTagClick,
-}: {
-  project: Project;
-  isAdmin: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
-  /** When true, renders a drag handle and wires up drag-and-drop reordering. Admin only. */
-  reorderable?: boolean;
-  isDragging?: boolean;
-  isDropTarget?: boolean;
-  onDragStart?: () => void;
-  onDragEnter?: () => void;
-  onDragEnd?: () => void;
-  onDrop?: () => void;
-  /** The currently active tag filter, if any. */
-  activeTag?: string | null;
-  /** Called when a tag badge is clicked. */
-  onTagClick?: (tag: string) => void;
-}) {
+}: ProjectCardProps) {
   const thumbnailUrl = project.thumbnailObjectPath ? `/api/storage${project.thumbnailObjectPath}` : null;
   const hasDemo = project.demoType !== "none";
   const tags = project.tags ?? [];
@@ -45,37 +75,14 @@ export function ProjectCard({
     <div
       className={cn(
         "group relative flex flex-col rounded-2xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow",
-        isDragging && "opacity-40",
+        isDragging && "opacity-40 shadow-xl",
         isDropTarget && "ring-2 ring-primary",
       )}
-      draggable={reorderable}
-      onDragStart={(e) => {
-        if (!reorderable) return;
-        e.dataTransfer.effectAllowed = "move";
-        onDragStart?.();
-      }}
-      onDragEnter={(e) => {
-        if (!reorderable) return;
-        e.preventDefault();
-        onDragEnter?.();
-      }}
-      onDragOver={(e) => {
-        if (!reorderable) return;
-        e.preventDefault();
-      }}
-      onDrop={(e) => {
-        if (!reorderable) return;
-        e.preventDefault();
-        onDrop?.();
-      }}
-      onDragEnd={() => {
-        if (!reorderable) return;
-        onDragEnd?.();
-      }}
     >
       {reorderable && (
         <div
-          className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-background/80 border border-border cursor-grab active:cursor-grabbing text-muted-foreground"
+          {...dragHandleProps}
+          className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-background/80 border border-border cursor-grab active:cursor-grabbing text-muted-foreground touch-none"
           aria-label="Drag to reorder"
         >
           <GripVertical className="w-4 h-4" />
@@ -115,7 +122,7 @@ export function ProjectCard({
         {/* Tags */}
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 pt-1">
-            {tags.map((tag) => (
+            {tags.map((tag: string) => (
               <button
                 key={tag}
                 type="button"

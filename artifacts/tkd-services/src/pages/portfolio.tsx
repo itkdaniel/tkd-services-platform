@@ -10,7 +10,6 @@ import {
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
@@ -22,9 +21,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ProjectCard } from "@/components/project-card";
+import { SortableProjectCard, ProjectCard } from "@/components/project-card";
 import { ProjectFormDialog } from "@/components/project-form-dialog";
 import { Plus, Briefcase } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { SortableContext, arrayMove, rectSortingStrategy } from "@dnd-kit/sortable";
 
 export default function Portfolio() {
   const { toast } = useToast();
@@ -44,17 +53,15 @@ export default function Portfolio() {
   const deleteProject = useDeleteProject();
   const reorderProjects = useReorderProjects();
 
-  // Local, optimistic ordering the admin can drag around. Kept in sync with
-  // the server list whenever it changes and we're not mid-drag, so guests
-  // (who never touch this state) always just render `projects` in order.
+  // Local optimistic ordering the admin can drag around. Kept in sync with
+  // the server list whenever it changes and we're not mid-drag.
   const [orderedProjects, setOrderedProjects] = useState<Project[] | null>(null);
-  const [draggedId, setDraggedId] = useState<number | null>(null);
-  const [dropTargetId, setDropTargetId] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
-    if (draggedId !== null) return; // don't clobber an in-progress drag
+    if (isDragging) return; // don't clobber an in-progress drag
     setOrderedProjects(projects ?? null);
-  }, [projects, draggedId]);
+  }, [projects, isDragging]);
 
   // All unique tags across all projects, in the order they first appear.
   const allTags = useMemo(() => {
@@ -86,30 +93,45 @@ export default function Portfolio() {
     return baseProjects.filter((p) => (p.tags ?? []).includes(activeTag));
   }, [baseProjects, activeTag]);
 
-  const handleDragEnter = (targetId: number) => {
-    if (draggedId === null || draggedId === targetId) return;
-    setDropTargetId(targetId);
+  // dnd-kit sensors — PointerSensor covers mouse + stylus; TouchSensor covers
+  // finger touch. activationConstraint on touch prevents accidental drags
+  // while scrolling (requires 250 ms press or 5 px movement before activating).
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 5 },
+    }),
+  );
+
+  const handleDragStart = () => setIsDragging(true);
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    setIsDragging(false);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
     setOrderedProjects((current) => {
       if (!current) return current;
-      const fromIndex = current.findIndex((p) => p.id === draggedId);
-      const toIndex = current.findIndex((p) => p.id === targetId);
-      if (fromIndex === -1 || toIndex === -1) return current;
-      const next = [...current];
-      const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved!);
-      return next;
+      const oldIndex = current.findIndex((p) => p.id === active.id);
+      const newIndex = current.findIndex((p) => p.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return current;
+      return arrayMove(current, oldIndex, newIndex);
     });
-  };
 
-  const handleDragEnd = async () => {
-    // Both the drop target's onDrop and the dragged card's onDragEnd call
-    // this; only act on the first of the two.
-    if (draggedId === null) return;
-    setDraggedId(null);
-    setDropTargetId(null);
-    if (!orderedProjects) return;
+    // Persist — read the freshly reordered list from state after the setState
+    // has been applied. We capture ids before the async gap.
+    const reordered = (() => {
+      const current = orderedProjects ?? [];
+      const oldIndex = current.findIndex((p) => p.id === active.id);
+      const newIndex = current.findIndex((p) => p.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return current;
+      return arrayMove(current, oldIndex, newIndex);
+    })();
+
     try {
-      await reorderProjects.mutateAsync({ data: { ids: orderedProjects.map((p) => p.id) } });
+      await reorderProjects.mutateAsync({ data: { ids: reordered.map((p) => p.id) } });
       invalidate();
     } catch (err) {
       toast({ title: "Reorder failed", description: (err as any)?.message, variant: "destructive" });
@@ -141,6 +163,10 @@ export default function Portfolio() {
   };
 
   const hasProjects = (projects ?? []).length > 0;
+  // Reordering via drag is disabled while a tag filter is active, because the
+  // displayed list is a subset of the full order — moving within it would
+  // produce an ambiguous result.
+  const reorderable = isAdmin && !activeTag;
 
   return (
     <div className="flex flex-col w-full animate-in fade-in duration-500">
@@ -214,7 +240,9 @@ export default function Portfolio() {
 
               {isAdmin && (
                 <p className="text-sm text-muted-foreground mb-4">
-                  Drag a card by its handle to change the order visitors see.
+                  {reorderable
+                    ? "Press and hold a card's handle to reorder — works on touch screens too."
+                    : "Clear the tag filter to reorder cards."}
                 </p>
               )}
 
@@ -226,6 +254,30 @@ export default function Portfolio() {
                     Show all
                   </Button>
                 </div>
+              ) : reorderable ? (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext items={displayProjects.map((p) => p.id)} strategy={rectSortingStrategy}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {displayProjects.map((project) => (
+                        <SortableProjectCard
+                          key={project.id}
+                          project={project}
+                          isAdmin={isAdmin}
+                          onEdit={() => openEdit(project)}
+                          onDelete={() => setDeletingProject(project)}
+                          reorderable={true}
+                          activeTag={activeTag}
+                          onTagClick={(tag) => setActiveTag(activeTag === tag ? null : tag)}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {displayProjects.map((project) => (
@@ -235,13 +287,7 @@ export default function Portfolio() {
                       isAdmin={isAdmin}
                       onEdit={() => openEdit(project)}
                       onDelete={() => setDeletingProject(project)}
-                      reorderable={isAdmin && !activeTag}
-                      isDragging={draggedId === project.id}
-                      isDropTarget={dropTargetId === project.id}
-                      onDragStart={() => setDraggedId(project.id)}
-                      onDragEnter={() => handleDragEnter(project.id)}
-                      onDrop={handleDragEnd}
-                      onDragEnd={handleDragEnd}
+                      reorderable={false}
                       activeTag={activeTag}
                       onTagClick={(tag) => setActiveTag(activeTag === tag ? null : tag)}
                     />
